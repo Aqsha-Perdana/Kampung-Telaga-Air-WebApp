@@ -182,7 +182,7 @@
         @foreach($data['inflows']['by_payment_method'] as $method => $methodData)
         <tr>
             <td colspan="2" class="account-line indent-2">
-                <span class="account-name">{{ $method ?? 'Metode Lainnya' }} ({{ $methodData['count'] }}x)</span>
+                <span class="account-name">{{ $method === 'stripe' ? 'Credit/Debit Card (Stripe)' : ($method ?? 'Metode Lainnya') }} ({{ $methodData['count'] }}x)</span>
                 <span class="account-amount">RM {{ number_format($methodData['total'], 2) }}</span>
             </td>
         </tr>

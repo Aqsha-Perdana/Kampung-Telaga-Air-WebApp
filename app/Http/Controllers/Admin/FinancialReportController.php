@@ -2,29 +2,50 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\FinancialReportExport;
+use App\Exports\OwnerReportExport;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\FinancialReport\OwnerReportRequest;
+use App\Http\Requests\Admin\FinancialReport\ReportPeriodRequest;
+use App\Services\FinancialReport\FinancialStatementService;
+use App\Services\FinancialReport\OwnerReportService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FinancialReportController extends Controller
 {
+    public function __construct(
+        private readonly FinancialStatementService $financialStatementService,
+        private readonly OwnerReportService $ownerReportService
+    ) {
+    }
+
     /**
      * Main Financial Reports Dashboard
-     * Compliant with Malaysian Financial Reporting Standards (MFRS)
      */
-    public function index(Request $request)
+    public function index(ReportPeriodRequest $request)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-        
-        $profitLoss = $this->getStatementOfProfitOrLoss($startDate, $endDate);
-        $cashFlow = $this->getStatementOfCashFlows($startDate, $endDate);
-        $ownerSummary = $this->getOwnerSummary($startDate, $endDate);
-        
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $cacheKey = 'admin.financial.index.v1.' . md5(json_encode([
+            'start' => $startDate->toDateString(),
+            'end' => $endDate->toDateString(),
+        ]));
+
+        $payload = Cache::remember($cacheKey, now()->addSeconds(45), function () use ($startDate, $endDate) {
+            return [
+                'profitLoss' => $this->financialStatementService->getProfitLoss($startDate, $endDate),
+                'cashFlow' => $this->financialStatementService->getCashFlow($startDate, $endDate),
+                'ownerSummary' => $this->ownerReportService->getOwnerSummary($startDate, $endDate),
+            ];
+        });
+
+        $profitLoss = $payload['profitLoss'];
+        $cashFlow = $payload['cashFlow'];
+        $ownerSummary = $payload['ownerSummary'];
+
         return view('admin.financial-reports.index', compact(
             'profitLoss',
             'cashFlow',
@@ -33,990 +54,142 @@ class FinancialReportController extends Controller
             'endDate'
         ));
     }
-    
-    /**
-     * Export Profit & Loss to PDF
-     */
-    public function exportProfitLossPdf(Request $request)
+
+    public function exportProfitLossPdf(ReportPeriodRequest $request)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-        
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
         $data = [
-            'profitLoss' => $this->getStatementOfProfitOrLoss($startDate, $endDate),
+            'profitLoss' => $this->financialStatementService->getProfitLoss($startDate, $endDate),
             'startDate' => $startDate,
             'endDate' => $endDate,
             'generatedAt' => Carbon::now(),
         ];
-        
-        $pdf = PDF::loadView('admin.financial-reports.pdf-profit-loss', $data);
+
+        $pdf = Pdf::loadView('admin.financial-reports.pdf-profit-loss', $data);
         $pdf->setPaper('A4', 'portrait');
-        
-        $filename = 'Profit_Loss_Statement_' . Carbon::parse($startDate)->format('Ymd') . '_to_' . Carbon::parse($endDate)->format('Ymd') . '.pdf';
-        
+
+        $filename = 'Profit_Loss_Statement_' . $startDate->format('Ymd') . '_to_' . $endDate->format('Ymd') . '.pdf';
+
         return $pdf->download($filename);
     }
-    
-    /**
-     * Export Cash Flow to PDF
-     */
-    public function exportCashFlowPdf(Request $request)
+
+    public function exportCashFlowPdf(ReportPeriodRequest $request)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-        
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
         $data = [
-            'cashFlow' => $this->getStatementOfCashFlows($startDate, $endDate),
+            'cashFlow' => $this->financialStatementService->getCashFlow($startDate, $endDate),
             'startDate' => $startDate,
             'endDate' => $endDate,
             'generatedAt' => Carbon::now(),
         ];
-        
-        $pdf = PDF::loadView('admin.financial-reports.pdf-cash-flow', $data);
+
+        $pdf = Pdf::loadView('admin.financial-reports.pdf-cash-flow', $data);
         $pdf->setPaper('A4', 'portrait');
-        
-        $filename = 'Cash_Flow_Statement_' . Carbon::parse($startDate)->format('Ymd') . '_to_' . Carbon::parse($endDate)->format('Ymd') . '.pdf';
-        
+
+        $filename = 'Cash_Flow_Statement_' . $startDate->format('Ymd') . '_to_' . $endDate->format('Ymd') . '.pdf';
+
         return $pdf->download($filename);
     }
-    
-    /**
-     * Export to Excel
-     */
-    public function exportExcel(Request $request)
+
+    public function exportExcel(ReportPeriodRequest $request)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-        
-        $filename = 'Financial_Report_' . Carbon::parse($startDate)->format('Ymd') . '_to_' . Carbon::parse($endDate)->format('Ymd') . '.xlsx';
-        
-        return Excel::download(
-            new FinancialReportExport($startDate, $endDate), 
-            $filename
-        );
-    }
-    
-    /**
-     * STATEMENT OF PROFIT OR LOSS AND OTHER COMPREHENSIVE INCOME
-     * Compliant with MFRS 101: Presentation of Financial Statements
-     */
-    private function getStatementOfProfitOrLoss($startDate, $endDate)
-    {
-        $orders = DB::table('orders')
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->get();
-        
-        $revenue = $orders->sum('base_amount');
-        
-        $costOfSales = 0;
-        $revenueBreakdown = [];
-        
-        foreach ($orders as $order) {
-            $orderCost = $this->calculateOrderCost($order->id_order);
-            $costOfSales += $orderCost['total'];
-            
-            $revenueBreakdown[] = [
-                'order_id' => $order->id_order,
-                'customer' => $order->customer_name,
-                'date' => $order->created_at,
-                'revenue' => $order->base_amount,
-                'currency_info' => [
-                    'payment_currency' => 'MYR',
-                    'display_currency' => $order->display_currency,
-                    'display_amount' => $order->display_amount,
-                ],
-                'cost_of_sales' => $orderCost['total'],
-                'gross_profit' => $order->base_amount - $orderCost['total'],
-                'cost_breakdown' => $orderCost['breakdown']
-            ];
-        }
-        
-        $grossProfit = $revenue - $costOfSales;
-        
-        $operatingExpenses = DB::table('beban_operasionals')
-            ->whereBetween('tanggal', [$startDate, $endDate])
-            ->get();
-        
-        $expensesByNature = $operatingExpenses->groupBy('kategori')->map(function($items) {
-            return [
-                'count' => $items->count(),
-                'amount' => $items->sum('jumlah')
-            ];
-        })->toArray();
-        
-        $totalOperatingExpenses = $operatingExpenses->sum('jumlah');
-        $operatingProfit = $grossProfit - $totalOperatingExpenses;
-        
-        $otherIncome = 0;
-        $otherExpenses = 0;
-        $profitBeforeTax = $operatingProfit + $otherIncome - $otherExpenses;
-        
-        $taxRate = 0;
-        $taxExpense = $profitBeforeTax * $taxRate;
-        $profitForPeriod = $profitBeforeTax - $taxExpense;
-        
-        $grossProfitMargin = $revenue > 0 ? ($grossProfit / $revenue) * 100 : 0;
-        $operatingProfitMargin = $revenue > 0 ? ($operatingProfit / $revenue) * 100 : 0;
-        $netProfitMargin = $revenue > 0 ? ($profitForPeriod / $revenue) * 100 : 0;
-        
-        return [
-            'period' => [
-                'start' => $startDate,
-                'end' => $endDate,
-                'currency' => 'MYR',
-            ],
-            'revenue' => [
-                'tour_package_sales' => $revenue,
-                'other_revenue' => 0,
-                'total_revenue' => $revenue,
-            ],
-            'cost_of_sales' => [
-                'boat_services' => $this->getCostByType($orders, 'boats'),
-                'homestay_services' => $this->getCostByType($orders, 'homestays'),
-                'culinary_services' => $this->getCostByType($orders, 'culinary'),
-                'kiosk_services' => $this->getCostByType($orders, 'kiosks'),
-                'total_cost_of_sales' => $costOfSales,
-            ],
-            'gross_profit' => [
-                'amount' => $grossProfit,
-                'margin_percentage' => $grossProfitMargin,
-            ],
-            'operating_expenses' => [
-                'by_nature' => $expensesByNature,
-                'total_operating_expenses' => $totalOperatingExpenses,
-            ],
-            'operating_profit' => [
-                'amount' => $operatingProfit,
-                'margin_percentage' => $operatingProfitMargin,
-            ],
-            'other_items' => [
-                'other_income' => $otherIncome,
-                'other_expenses' => $otherExpenses,
-                'net_other_items' => $otherIncome - $otherExpenses,
-            ],
-            'profit_before_tax' => [
-                'amount' => $profitBeforeTax,
-            ],
-            'tax_expense' => [
-                'current_tax' => $taxExpense,
-                'deferred_tax' => 0,
-                'total_tax' => $taxExpense,
-                'effective_tax_rate' => $taxRate * 100,
-            ],
-            'profit_for_period' => [
-                'amount' => $profitForPeriod,
-                'margin_percentage' => $netProfitMargin,
-            ],
-            'transactions' => [
-                'total_orders' => $orders->count(),
-                'total_customers' => $orders->unique('customer_email')->count(),
-            ],
-            'revenue_breakdown' => $revenueBreakdown,
-        ];
-    }
-    
-    /**
-     * STATEMENT OF CASH FLOWS
-     * Compliant with MFRS 107: Statement of Cash Flows
-     */
-    private function getStatementOfCashFlows($startDate, $endDate)
-    {
-        $cashFromCustomers = DB::table('orders')
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->sum('base_amount');
-        
-        $paymentMethodBreakdown = DB::table('orders')
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->select(
-                'payment_method',
-                DB::raw('COUNT(*) as transaction_count'),
-                DB::raw('SUM(base_amount) as total_amount')
-            )
-            ->groupBy('payment_method')
-            ->get()
-            ->mapWithKeys(function($item) {
-                return [$item->payment_method => [
-                    'count' => $item->transaction_count,
-                    'amount' => $item->total_amount
-                ]];
-            })
-            ->toArray();
-        
-        $orders = DB::table('orders')
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->get();
-        
-        $cashToSuppliers = 0;
-        $supplierBreakdown = [
-            'boat_owners' => 0,
-            'homestay_owners' => 0,
-            'culinary_providers' => 0,
-            'kiosk_owners' => 0,
-        ];
-        
-        foreach ($orders as $order) {
-            $orderCost = $this->calculateOrderCost($order->id_order);
-            $cashToSuppliers += $orderCost['total'];
-            
-            $supplierBreakdown['boat_owners'] += $orderCost['breakdown']['boats']['total'];
-            $supplierBreakdown['homestay_owners'] += $orderCost['breakdown']['homestays']['total'];
-            $supplierBreakdown['culinary_providers'] += $orderCost['breakdown']['culinary']['total'];
-            $supplierBreakdown['kiosk_owners'] += $orderCost['breakdown']['kiosks']['total'];
-        }
-        
-        $cashForOperatingExpenses = DB::table('beban_operasionals')
-            ->whereBetween('tanggal', [$startDate, $endDate])
-            ->sum('jumlah');
-        
-        $operatingExpensesByCategory = DB::table('beban_operasionals')
-            ->select('kategori', DB::raw('SUM(jumlah) as total'))
-            ->whereBetween('tanggal', [$startDate, $endDate])
-            ->groupBy('kategori')
-            ->get()
-            ->pluck('total', 'kategori')
-            ->toArray();
-        
-        $netCashFromOperating = $cashFromCustomers - $cashToSuppliers - $cashForOperatingExpenses;
-        
-        $cashForInvestments = 0;
-        $cashFromInvestments = 0;
-        $netCashFromInvesting = $cashFromInvestments - $cashForInvestments;
-        
-        $cashFromFinancing = 0;
-        $cashForFinancing = 0;
-        $netCashFromFinancing = $cashFromFinancing - $cashForFinancing;
-        
-        $netCashMovement = $netCashFromOperating + $netCashFromInvesting + $netCashFromFinancing;
-        
-        $openingCash = 0;
-        $closingCash = $openingCash + $netCashMovement;
-        
-        return [
-            'period' => [
-                'start' => $startDate,
-                'end' => $endDate,
-                'currency' => 'MYR',
-            ],
-            'operating_activities' => [
-                'cash_receipts' => [
-                    'from_customers' => $cashFromCustomers,
-                    'by_payment_method' => $paymentMethodBreakdown,
-                ],
-                'cash_payments' => [
-                    'to_suppliers' => $cashToSuppliers,
-                    'supplier_breakdown' => $supplierBreakdown,
-                    'operating_expenses' => $cashForOperatingExpenses,
-                    'expense_breakdown' => $operatingExpensesByCategory,
-                ],
-                'net_cash_from_operating' => $netCashFromOperating,
-            ],
-            'investing_activities' => [
-                'cash_outflows' => [
-                    'purchase_of_assets' => $cashForInvestments,
-                ],
-                'cash_inflows' => [
-                    'sale_of_assets' => $cashFromInvestments,
-                ],
-                'net_cash_from_investing' => $netCashFromInvesting,
-            ],
-            'financing_activities' => [
-                'cash_inflows' => [
-                    'loans_received' => $cashFromFinancing,
-                ],
-                'cash_outflows' => [
-                    'loan_repayments' => $cashForFinancing,
-                ],
-                'net_cash_from_financing' => $netCashFromFinancing,
-            ],
-            'cash_summary' => [
-                'net_cash_from_operating' => $netCashFromOperating,
-                'net_cash_from_investing' => $netCashFromInvesting,
-                'net_cash_from_financing' => $netCashFromFinancing,
-                'net_increase_in_cash' => $netCashMovement,
-            ],
-            'cash_reconciliation' => [
-                'opening_balance' => $openingCash,
-                'net_movement' => $netCashMovement,
-                'closing_balance' => $closingCash,
-            ],
-            'statistics' => [
-                'total_transactions' => $orders->count(),
-                'average_transaction_value' => $orders->count() > 0 ? $cashFromCustomers / $orders->count() : 0,
-            ],
-        ];
-    }
-    
-    private function getCostByType($orders, $type)
-    {
-        $total = 0;
-        foreach ($orders as $order) {
-            $orderCost = $this->calculateOrderCost($order->id_order);
-            $total += $orderCost['breakdown'][$type]['total'];
-        }
-        return $total;
-    }
-    
-    private function calculateOrderCost($orderId)
-    {
-        $orderItems = DB::table('order_items')->where('id_order', $orderId)->get();
-        
-        $totalCost = 0;
-        $breakdown = [
-            'boats' => ['items' => [], 'total' => 0],
-            'homestays' => ['items' => [], 'total' => 0],
-            'culinary' => ['items' => [], 'total' => 0],
-            'kiosks' => ['items' => [], 'total' => 0]
-        ];
-        
-        foreach ($orderItems as $item) {
-            $boats = DB::table('paket_wisata_boat')
-                ->join('boats', 'paket_wisata_boat.id_boat', '=', 'boats.id')
-                ->where('paket_wisata_boat.id_paket', $item->id_paket)
-                ->select('boats.*')
-                ->get();
-            
-            foreach ($boats as $boat) {
-                $cost = $boat->harga_sewa;
-                $totalCost += $cost;
-                $breakdown['boats']['items'][] = [
-                    'name' => $boat->nama,
-                    'unit_price' => $boat->harga_sewa,
-                    'quantity' => 1,
-                    'total' => $cost
-                ];
-                $breakdown['boats']['total'] += $cost;
-            }
-            
-            $homestays = DB::table('paket_wisata_homestay')
-                ->join('homestays', 'paket_wisata_homestay.id_homestay', '=', 'homestays.id_homestay')
-                ->where('paket_wisata_homestay.id_paket', $item->id_paket)
-                ->select('homestays.*', 'paket_wisata_homestay.jumlah_malam')
-                ->get();
-            
-            foreach ($homestays as $homestay) {
-                $cost = $homestay->harga_per_malam * $homestay->jumlah_malam;
-                $totalCost += $cost;
-                $breakdown['homestays']['items'][] = [
-                    'name' => $homestay->nama,
-                    'unit_price' => $homestay->harga_per_malam,
-                    'quantity' => $homestay->jumlah_malam,
-                    'total' => $cost
-                ];
-                $breakdown['homestays']['total'] += $cost;
-            }
-            
-            $culinary = DB::table('paket_wisata_culinary')
-                ->join('paket_culinaries', 'paket_wisata_culinary.id_paket_culinary', '=', 'paket_culinaries.id')
-                ->where('paket_wisata_culinary.id_paket', $item->id_paket)
-                ->select('paket_culinaries.*')
-                ->get();
-            
-            foreach ($culinary as $cul) {
-                $cost = $cul->harga;
-                $totalCost += $cost;
-                $breakdown['culinary']['items'][] = [
-                    'name' => $cul->nama_paket,
-                    'unit_price' => $cul->harga,
-                    'quantity' => 1,
-                    'total' => $cost
-                ];
-                $breakdown['culinary']['total'] += $cost;
-            }
-            
-            $kiosks = DB::table('paket_wisata_kiosk')
-                ->join('kiosks', 'paket_wisata_kiosk.id_kiosk', '=', 'kiosks.id_kiosk')
-                ->where('paket_wisata_kiosk.id_paket', $item->id_paket)
-                ->select('kiosks.*')
-                ->get();
-            
-            foreach ($kiosks as $kiosk) {
-                $cost = $kiosk->harga_per_paket;
-                $totalCost += $cost;
-                $breakdown['kiosks']['items'][] = [
-                    'name' => $kiosk->nama,
-                    'unit_price' => $kiosk->harga_per_paket,
-                    'quantity' => 1,
-                    'total' => $cost
-                ];
-                $breakdown['kiosks']['total'] += $cost;
-            }
-        }
-        
-        return [
-            'total' => $totalCost,
-            'breakdown' => $breakdown
-        ];
-    }
-    
-    private function getOwnerSummary($startDate, $endDate)
-    {
-        return [
-            'boats' => $this->getBoatOwnersSummary($startDate, $endDate),
-            'homestays' => $this->getHomestayOwnersSummary($startDate, $endDate),
-            'culinary' => $this->getCulinaryOwnersSummary($startDate, $endDate),
-            'kiosks' => $this->getKioskOwnersSummary($startDate, $endDate)
-        ];
-    }
-    
-    /**
-     * BOAT OWNERS SUMMARY
-     */
-    private function getBoatOwnersSummary($startDate, $endDate)
-    {
-        $boats = DB::table('boats')->where('is_active', 1)->get();
-        $summary = [];
-        
-        foreach ($boats as $boat) {
-            $usage = DB::table('paket_wisata_boat')
-                ->join('order_items', 'paket_wisata_boat.id_paket', '=', 'order_items.id_paket')
-                ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-                ->where('paket_wisata_boat.id_boat', $boat->id)
-                ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-                ->whereBetween('orders.created_at', [$startDate, $endDate])
-                ->select(
-                    'order_items.id_order',
-                    'order_items.nama_paket',
-                    'order_items.tanggal_keberangkatan',
-                    'order_items.jumlah_peserta',
-                    'orders.customer_name',
-                    'orders.created_at',
-                    'paket_wisata_boat.hari_ke'
-                )
-                ->get();
-            
-            $totalRevenue = $usage->count() * $boat->harga_sewa;
-            
-            $summary[] = [
-                'id' => $boat->id_boat,
-                'name' => $boat->nama,
-                'type' => 'Boat',
-                'price_per_unit' => $boat->harga_sewa,
-                'unit_name' => 'day',
-                'usage_count' => $usage->count(),
-                'total_participants' => $usage->sum('jumlah_peserta'),
-                'total_revenue' => $totalRevenue,
-                'transactions' => $usage
-            ];
-        }
-        
-        return $summary;
-    }
-    
-    /**
-     * HOMESTAY OWNERS SUMMARY
-     */
-    private function getHomestayOwnersSummary($startDate, $endDate)
-    {
-        $homestays = DB::table('homestays')->where('is_active', 1)->get();
-        $summary = [];
-        
-        foreach ($homestays as $homestay) {
-            $usage = DB::table('paket_wisata_homestay')
-                ->join('order_items', 'paket_wisata_homestay.id_paket', '=', 'order_items.id_paket')
-                ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-                ->where('paket_wisata_homestay.id_homestay', $homestay->id_homestay)
-                ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-                ->whereBetween('orders.created_at', [$startDate, $endDate])
-                ->select(
-                    'order_items.id_order',
-                    'order_items.nama_paket',
-                    'order_items.tanggal_keberangkatan',
-                    'order_items.jumlah_peserta',
-                    'orders.customer_name',
-                    'orders.created_at',
-                    'paket_wisata_homestay.jumlah_malam'
-                )
-                ->get();
-            
-            $totalNights = $usage->sum('jumlah_malam');
-            $totalRevenue = $totalNights * $homestay->harga_per_malam;
-            
-            $summary[] = [
-                'id' => $homestay->id_homestay,
-                'name' => $homestay->nama,
-                'type' => 'Homestay',
-                'price_per_unit' => $homestay->harga_per_malam,
-                'unit_name' => 'night',
-                'usage_count' => $usage->count(),
-                'total_units' => $totalNights,
-                'total_participants' => $usage->sum('jumlah_peserta'),
-                'total_revenue' => $totalRevenue,
-                'transactions' => $usage
-            ];
-        }
-        
-        return $summary;
-    }
-    
-    /**
-     * CULINARY OWNERS SUMMARY
-     */
-    private function getCulinaryOwnersSummary($startDate, $endDate)
-    {
-        $culinaries = DB::table('paket_culinaries')
-            ->join('culinaries', 'paket_culinaries.id_culinary', '=', 'culinaries.id_culinary')
-            ->select('paket_culinaries.*', 'culinaries.nama as culinary_name')
-            ->get();
-        
-        $summary = [];
-        
-        foreach ($culinaries as $paket) {
-            $usage = DB::table('paket_wisata_culinary')
-                ->join('order_items', 'paket_wisata_culinary.id_paket', '=', 'order_items.id_paket')
-                ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-                ->where('paket_wisata_culinary.id_paket_culinary', $paket->id)
-                ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-                ->whereBetween('orders.created_at', [$startDate, $endDate])
-                ->select(
-                    'order_items.id_order',
-                    'order_items.nama_paket',
-                    'order_items.tanggal_keberangkatan',
-                    'order_items.jumlah_peserta',
-                    'orders.customer_name',
-                    'orders.created_at',
-                    'paket_wisata_culinary.hari_ke'
-                )
-                ->get();
-            
-            $totalRevenue = $usage->count() * $paket->harga;
-            
-            $summary[] = [
-                'id' => $paket->id_culinary,
-                'name' => $paket->culinary_name . ' - ' . $paket->nama_paket,
-                'type' => 'Culinary',
-                'price_per_unit' => $paket->harga,
-                'unit_name' => 'package',
-                'usage_count' => $usage->count(),
-                'total_participants' => $usage->sum('jumlah_peserta'),
-                'total_revenue' => $totalRevenue,
-                'transactions' => $usage
-            ];
-        }
-        
-        return $summary;
-    }
-    
-    /**
-     * KIOSK OWNERS SUMMARY
-     */
-    private function getKioskOwnersSummary($startDate, $endDate)
-    {
-        $kiosks = DB::table('kiosks')->get();
-        $summary = [];
-        
-        foreach ($kiosks as $kiosk) {
-            $usage = DB::table('paket_wisata_kiosk')
-                ->join('order_items', 'paket_wisata_kiosk.id_paket', '=', 'order_items.id_paket')
-                ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-                ->where('paket_wisata_kiosk.id_kiosk', $kiosk->id_kiosk)
-                ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-                ->whereBetween('orders.created_at', [$startDate, $endDate])
-                ->select(
-                    'order_items.id_order',
-                    'order_items.nama_paket',
-                    'order_items.tanggal_keberangkatan',
-                    'order_items.jumlah_peserta',
-                    'orders.customer_name',
-                    'orders.created_at',
-                    'paket_wisata_kiosk.hari_ke'
-                )
-                ->get();
-            
-            $totalRevenue = $usage->count() * $kiosk->harga_per_paket;
-            
-            $summary[] = [
-                'id' => $kiosk->id_kiosk,
-                'name' => $kiosk->nama,
-                'type' => 'Kiosk',
-                'price_per_unit' => $kiosk->harga_per_paket,
-                'unit_name' => 'package',
-                'usage_count' => $usage->count(),
-                'total_participants' => $usage->sum('jumlah_peserta'),
-                'total_revenue' => $totalRevenue,
-                'transactions' => $usage
-            ];
-        }
-        
-        return $summary;
-    }
-    
-    /**
-     * Individual Owner Report
-     */
-    public function ownerReport(Request $request, $type, $id)
-    {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-        
-        $report = null;
-        
-        switch ($type) {
-            case 'boat':
-                $report = $this->getBoatOwnerReport($id, $startDate, $endDate);
-                break;
-            case 'homestay':
-                $report = $this->getHomestayOwnerReport($id, $startDate, $endDate);
-                break;
-            case 'culinary':
-                $report = $this->getCulinaryOwnerReport($id, $startDate, $endDate);
-                break;
-            case 'kiosk':
-                $report = $this->getKioskOwnerReport($id, $startDate, $endDate);
-                break;
-        }
-        
-        return view('admin.financial-reports.pdf.owner-detail', compact('report', 'type', 'startDate', 'endDate'));
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $filename = 'Financial_Report_' . $startDate->format('Ymd') . '_to_' . $endDate->format('Ymd') . '.xlsx';
+
+        return Excel::download(new FinancialReportExport($startDate, $endDate), $filename);
     }
 
-    public function exportLabaRugiPDF(Request $request)
+    /**
+     * Backward-compatible endpoint alias for owner detail route.
+     */
+    public function ownerReport(OwnerReportRequest $request, $type, $id)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-        
-        $labaRugi = $this->getLabaRugi($startDate, $endDate);
-        
-        $pdf = Pdf::loadView('admin.financial-reports.pdf.laba-rugi', [
-            'data' => $labaRugi,
+        return $this->ownerDetail($request, $type, $id);
+    }
+
+    public function ownerDetail(OwnerReportRequest $request, $type, $id)
+    {
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $ownerType = (string) $request->route('type');
+        $ownerId = (string) $request->route('id');
+        $cacheKey = 'admin.financial.owner-detail.v1.' . md5(json_encode([
+            'type' => $ownerType,
+            'id' => $ownerId,
+            'start' => $startDate->toDateString(),
+            'end' => $endDate->toDateString(),
+        ]));
+
+        $report = Cache::remember($cacheKey, now()->addSeconds(45), function () use ($ownerType, $ownerId, $startDate, $endDate) {
+            return $this->ownerReportService->getOwnerDetail($ownerType, $ownerId, $startDate, $endDate);
+        });
+
+        if (!$report) {
+            return redirect()->route('financial-reports.index')
+                ->with('error', 'Owner not found');
+        }
+
+        $type = $ownerType;
+
+        return view('admin.financial-reports.owner-detail', compact('report', 'type', 'startDate', 'endDate'));
+    }
+
+    public function exportOwnerPDF(OwnerReportRequest $request, $type, $id)
+    {
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $ownerType = (string) $request->route('type');
+        $ownerId = (string) $request->route('id');
+        $report = $this->ownerReportService->getOwnerDetail($ownerType, $ownerId, $startDate, $endDate);
+
+        if (!$report) {
+            return redirect()->back()->with('error', 'Owner not found');
+        }
+
+        $pdf = Pdf::loadView('admin.financial-reports.pdf.owner-report', [
+            'report' => $report,
+            'type' => $ownerType,
             'startDate' => $startDate,
-            'endDate' => $endDate
+            'endDate' => $endDate,
         ]);
-        
+
         $pdf->setPaper('a4', 'portrait');
-        
-        $filename = 'Laporan-Laba-Rugi-' . Carbon::parse($startDate)->format('Y-m-d') . '-to-' . Carbon::parse($endDate)->format('Y-m-d') . '.pdf';
-        
+
+        $safeName = preg_replace('/[^A-Za-z0-9\-]/', '-', (string) $report['name']);
+        $filename = 'Owner-Report-' . strtoupper($ownerType) . '-' . $safeName . '-' . $startDate->format('d-M-Y') . '.pdf';
+
         return $pdf->download($filename);
     }
-    
-    /**
-     * Export Laporan Arus Kas to PDF
-     */
-    public function exportArusKasPDF(Request $request)
+
+    public function exportOwnerExcel(OwnerReportRequest $request, $type, $id)
     {
-        $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-        $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-        
-        $arusKas = $this->getArusKas($startDate, $endDate);
-        
-        $pdf = Pdf::loadView('admin.financial-reports.pdf.arus-kas', [
-            'data' => $arusKas,
-            'startDate' => $startDate,
-            'endDate' => $endDate
-        ]);
-        
-        $pdf->setPaper('a4', 'portrait');
-        
-        $filename = 'Laporan-Arus-Kas-' . Carbon::parse($startDate)->format('Y-m-d') . '-to-' . Carbon::parse($endDate)->format('Y-m-d') . '.pdf';
-        
-        return $pdf->download($filename);
+        [$startDate, $endDate] = $this->resolvePeriod($request);
+
+        $ownerType = (string) $request->route('type');
+        $ownerId = (string) $request->route('id');
+        $filename = 'Owner-Report-' . strtoupper($ownerType) . '-' . $ownerId . '-' . $startDate->format('d-M-Y') . '.xlsx';
+
+        return Excel::download(new OwnerReportExport($ownerType, $ownerId, $startDate, $endDate), $filename);
     }
 
     /**
- * Show Owner Detail Report
- */
-public function ownerDetail(Request $request, $type, $id)
-{
-    $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-    $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-    
-    $report = null;
-    
-    switch ($type) {
-        case 'boat':
-            $report = $this->getBoatOwnerDetailReport($id, $startDate, $endDate);
-            break;
-        case 'homestay':
-            $report = $this->getHomestayOwnerDetailReport($id, $startDate, $endDate);
-            break;
-        case 'culinary':
-            $report = $this->getCulinaryOwnerDetailReport($id, $startDate, $endDate);
-            break;
-        case 'kiosk':
-            $report = $this->getKioskOwnerDetailReport($id, $startDate, $endDate);
-            break;
+     * Legacy aliases kept to avoid breaking existing links.
+     */
+    public function exportLabaRugiPDF(ReportPeriodRequest $request)
+    {
+        return $this->exportProfitLossPdf($request);
     }
-    
-    if (!$report) {
-        return redirect()->route('financial-reports.index')
-            ->with('error', 'Owner not found');
+
+    public function exportArusKasPDF(ReportPeriodRequest $request)
+    {
+        return $this->exportCashFlowPdf($request);
     }
-    
-    return view('admin.financial-reports.owner-detail', compact('report', 'type', 'startDate', 'endDate'));
-}
 
-/**
- * Export Owner Report to PDF
- */
-public function exportOwnerPDF(Request $request, $type, $id)
-{
-    $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-    $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-    
-    $report = null;
-    
-    switch ($type) {
-        case 'boat':
-            $report = $this->getBoatOwnerDetailReport($id, $startDate, $endDate);
-            break;
-        case 'homestay':
-            $report = $this->getHomestayOwnerDetailReport($id, $startDate, $endDate);
-            break;
-        case 'culinary':
-            $report = $this->getCulinaryOwnerDetailReport($id, $startDate, $endDate);
-            break;
-        case 'kiosk':
-            $report = $this->getKioskOwnerDetailReport($id, $startDate, $endDate);
-            break;
+    private function resolvePeriod(ReportPeriodRequest $request): array
+    {
+        return [$request->startDate(), $request->endDate()];
     }
-    
-    if (!$report) {
-        return redirect()->back()->with('error', 'Owner not found');
-    }
-    
-    $pdf = Pdf::loadView('admin.financial-reports.pdf.owner-report', [
-        'report' => $report,
-        'type' => $type,
-        'startDate' => $startDate,
-        'endDate' => $endDate
-    ]);
-    
-    $pdf->setPaper('a4', 'portrait');
-    
-    $filename = 'Owner-Report-' . strtoupper($type) . '-' . $report['name'] . '-' . Carbon::parse($startDate)->format('d-M-Y') . '.pdf';
-    
-    return $pdf->download($filename);
-}
-
-/**
- * Export Owner Report to Excel
- */
-public function exportOwnerExcel(Request $request, $type, $id)
-{
-    $startDate = $request->input('start_date', Carbon::now()->startOfMonth());
-    $endDate = $request->input('end_date', Carbon::now()->endOfMonth());
-    
-    $filename = 'Owner-Report-' . strtoupper($type) . '-' . $id . '-' . Carbon::parse($startDate)->format('d-M-Y') . '.xlsx';
-    
-    return Excel::download(new OwnerReportExport($type, $id, $startDate, $endDate), $filename);
-}
-
-/**
- * Get Boat Owner Detailed Report (Same structure as index)
- */
-private function getBoatOwnerDetailReport($boatId, $startDate, $endDate)
-{
-    // Debug: Cek boat ada atau tidak
-    $boat = DB::table('boats')->where('id_boat', $boatId)->first();
-    
-    if (!$boat) {
-        \Log::error('Boat not found with id_boat: ' . $boatId);
-        return null;
-    }
-    
-    \Log::info('Boat found:', ['boat' => $boat]);
-    
-    // Debug: Cek column name yang benar
-    \Log::info('Searching for boat with ID field:', ['id_boat' => $boat->id_boat, 'id' => $boat->id ?? 'not exists']);
-    
-    // Coba dengan kedua kemungkinan nama column
-    $transactions = DB::table('paket_wisata_boat')
-        ->join('order_items', 'paket_wisata_boat.id_paket', '=', 'order_items.id_paket')
-        ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-        ->where(function($query) use ($boat) {
-            // Coba kedua kemungkinan: id_boat atau id
-            if (isset($boat->id)) {
-                $query->where('paket_wisata_boat.id_boat', $boat->id);
-            } else {
-                $query->where('paket_wisata_boat.id_boat', $boat->id_boat);
-            }
-        })
-        ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-        ->whereBetween('orders.created_at', [$startDate, $endDate])
-        ->select(
-            'orders.id_order',
-            'orders.customer_name',
-            'orders.created_at',
-            'order_items.nama_paket',
-            'order_items.tanggal_keberangkatan',
-            'order_items.jumlah_peserta',
-            'paket_wisata_boat.hari_ke',
-            'paket_wisata_boat.id_boat as pivot_id_boat'
-        )
-        ->get();
-    
-    \Log::info('Transactions found:', ['count' => $transactions->count()]);
-    
-    if ($transactions->count() > 0) {
-        \Log::info('Sample transaction:', ['transaction' => $transactions->first()]);
-    }
-    
-    // Cek juga tanpa filter tanggal untuk debug
-    $allTransactions = DB::table('paket_wisata_boat')
-        ->join('order_items', 'paket_wisata_boat.id_paket', '=', 'order_items.id_paket')
-        ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-        ->where(function($query) use ($boat) {
-            if (isset($boat->id)) {
-                $query->where('paket_wisata_boat.id_boat', $boat->id);
-            } else {
-                $query->where('paket_wisata_boat.id_boat', $boat->id_boat);
-            }
-        })
-        ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-        ->count();
-    
-    \Log::info('Total transactions for this boat (all dates):', ['count' => $allTransactions]);
-    
-    $totalRevenue = $transactions->count() * $boat->harga_sewa;
-    
-    // Gunakan id yang konsisten
-    $boatIdToUse = isset($boat->id) ? $boat->id : $boat->id_boat;
-    
-    return [
-        'id' => $boatIdToUse,
-        'name' => $boat->nama,
-        'type' => 'Boat',
-        'price_per_unit' => $boat->harga_sewa,
-        'unit_name' => 'rental',
-        'usage_count' => $transactions->count(),
-        'total_participants' => $transactions->sum('jumlah_peserta'),
-        'total_revenue' => $totalRevenue,
-        'transactions' => $transactions
-    ];
-}
-
-/**
- * Get Homestay Owner Detailed Report (Same structure as index)
- */
-private function getHomestayOwnerDetailReport($homestayId, $startDate, $endDate)
-{
-    $homestay = DB::table('homestays')->where('id_homestay', $homestayId)->first();
-    
-    if (!$homestay) return null;
-    
-    $transactions = DB::table('paket_wisata_homestay')
-        ->join('order_items', 'paket_wisata_homestay.id_paket', '=', 'order_items.id_paket')
-        ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-        ->where('paket_wisata_homestay.id_homestay', $homestay->id_homestay)
-        ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-        ->whereBetween('orders.created_at', [$startDate, $endDate])
-        ->select(
-            'orders.id_order',
-            'orders.customer_name',
-            'orders.created_at',
-            'order_items.nama_paket',
-            'order_items.tanggal_keberangkatan',
-            'order_items.jumlah_peserta',
-            'paket_wisata_homestay.jumlah_malam'
-        )
-        ->orderBy('orders.created_at', 'desc')
-        ->get();
-    
-    $totalNights = $transactions->sum('jumlah_malam');
-    $totalRevenue = $totalNights * $homestay->harga_per_malam;
-    
-    return [
-        'id' => $homestay->id_homestay,
-        'name' => $homestay->nama,
-        'type' => 'Homestay',
-        'price_per_unit' => $homestay->harga_per_malam,
-        'unit_name' => 'night',
-        'usage_count' => $transactions->count(),
-        'total_units' => $totalNights,
-        'total_participants' => $transactions->sum('jumlah_peserta'),
-        'total_revenue' => $totalRevenue,
-        'transactions' => $transactions
-    ];
-}
-
-/**
- * Get Culinary Owner Detailed Report (Same structure as index)
- */
-private function getCulinaryOwnerDetailReport($culinaryId, $startDate, $endDate)
-{
-    $culinary = DB::table('paket_culinaries')
-        ->join('culinaries', 'paket_culinaries.id_culinary', '=', 'culinaries.id_culinary')
-        ->where('paket_culinaries.id_culinary', $culinaryId)
-        ->select('paket_culinaries.*', 'culinaries.nama as culinary_name')
-        ->first();
-    
-    if (!$culinary) return null;
-    
-    $transactions = DB::table('paket_wisata_culinary')
-        ->join('order_items', 'paket_wisata_culinary.id_paket', '=', 'order_items.id_paket')
-        ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-        ->where('paket_wisata_culinary.id_paket_culinary', $culinary->id)
-        ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-        ->whereBetween('orders.created_at', [$startDate, $endDate])
-        ->select(
-            'orders.id_order',
-            'orders.customer_name',
-            'orders.created_at',
-            'order_items.nama_paket',
-            'order_items.tanggal_keberangkatan',
-            'order_items.jumlah_peserta',
-            'paket_wisata_culinary.hari_ke'
-        )
-        ->orderBy('orders.created_at', 'desc')
-        ->get();
-    
-    $totalRevenue = $transactions->count() * $culinary->harga;
-    
-    return [
-        'id' => $culinary->id_culinary,
-        'name' => $culinary->culinary_name . ' - ' . $culinary->nama_paket,
-        'type' => 'Culinary',
-        'price_per_unit' => $culinary->harga,
-        'unit_name' => 'package',
-        'usage_count' => $transactions->count(),
-        'total_participants' => $transactions->sum('jumlah_peserta'),
-        'total_revenue' => $totalRevenue,
-        'transactions' => $transactions
-    ];
-}
-
-/**
- * Get Kiosk Owner Detailed Report (Same structure as index)
- */
-private function getKioskOwnerDetailReport($kioskId, $startDate, $endDate)
-{
-    $kiosk = DB::table('kiosks')->where('id_kiosk', $kioskId)->first();
-    
-    if (!$kiosk) return null;
-    
-    $transactions = DB::table('paket_wisata_kiosk')
-        ->join('order_items', 'paket_wisata_kiosk.id_paket', '=', 'order_items.id_paket')
-        ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-        ->where('paket_wisata_kiosk.id_kiosk', $kiosk->id_kiosk)
-        ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-        ->whereBetween('orders.created_at', [$startDate, $endDate])
-        ->select(
-            'orders.id_order',
-            'orders.customer_name',
-            'orders.created_at',
-            'order_items.nama_paket',
-            'order_items.tanggal_keberangkatan',
-            'order_items.jumlah_peserta',
-            'paket_wisata_kiosk.hari_ke'
-        )
-        ->orderBy('orders.created_at', 'desc')
-        ->get();
-    
-    $totalRevenue = $transactions->count() * $kiosk->harga_per_paket;
-    
-    return [
-        'id' => $kiosk->id_kiosk,
-        'name' => $kiosk->nama,
-        'type' => 'Kiosk',
-        'price_per_unit' => $kiosk->harga_per_paket,
-        'unit_name' => 'package',
-        'usage_count' => $transactions->count(),
-        'total_participants' => $transactions->sum('jumlah_peserta'),
-        'total_revenue' => $totalRevenue,
-        'transactions' => $transactions
-    ];
-}
 }

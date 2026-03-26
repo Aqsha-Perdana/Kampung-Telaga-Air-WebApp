@@ -32,29 +32,32 @@
                         <div class="mb-3">
                             <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" 
                                  alt="{{ $destinasi->nama }}"
-                                 class="img-fluid rounded shadow-lg"
-                                 style="width: 100%; height: 500px; object-fit: cover;">
+                                 class="img-fluid rounded shadow-lg detail-hero-image"
+                                 style="width: 100%; height: 500px; object-fit: cover;"
+                                 loading="lazy">
                         </div>
 
                         @if($destinasi->fotos->count() > 1)
                         <div class="row g-2">
                             @foreach($destinasi->fotos->skip(1)->take(4) as $foto)
-                            <div class="col-3">
+                            <div class="col-6 col-md-3">
                                 <img src="{{ asset('storage/'.$foto->foto) }}" 
                                      alt="{{ $destinasi->nama }}"
-                                     class="img-fluid rounded"
+                                     class="img-fluid rounded detail-thumb-image"
                                      style="width: 100%; height: 150px; object-fit: cover; cursor: pointer;"
+                                     loading="lazy"
                                      data-bs-toggle="modal" 
                                      data-bs-target="#galleryModal">
                             </div>
                             @endforeach
                             @if($destinasi->fotos->count() > 5)
-                            <div class="col-3">
+                            <div class="col-6 col-md-3">
                                 <div class="position-relative" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#galleryModal">
                                     <img src="{{ asset('storage/'.$destinasi->fotos->get(5)->foto) }}" 
                                          alt="{{ $destinasi->nama }}"
-                                         class="img-fluid rounded"
-                                         style="width: 100%; height: 150px; object-fit: cover;">
+                                         class="img-fluid rounded detail-thumb-image"
+                                         style="width: 100%; height: 150px; object-fit: cover;"
+                                         loading="lazy">
                                     <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-50 rounded">
                                         <span class="text-white fw-bold fs-4">+{{ $destinasi->fotos->count() - 5 }} More</span>
                                     </div>
@@ -66,8 +69,9 @@
                     @else
                         <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200" 
                              alt="{{ $destinasi->nama }}"
-                             class="img-fluid rounded shadow-lg"
-                             style="width: 100%; height: 500px; object-fit: cover;">
+                             class="img-fluid rounded shadow-lg detail-hero-image"
+                             style="width: 100%; height: 500px; object-fit: cover;"
+                             loading="lazy">
                     @endif
                 </div>
 
@@ -217,20 +221,22 @@
                     <a href="{{ route('landing.detail-destinasi', $rekomendasi->id_destinasi) }}" class="text-decoration-none">
                         <div class="card mb-3 border-0 shadow-sm">
                             <div class="row g-0">
-                                <div class="col-4">
+                                <div class="col-12 col-sm-4">
                                     @if($rekomendasi->fotos->count() > 0)
                                         <img src="{{ asset('storage/'.$rekomendasi->fotos->first()->foto) }}" 
                                              class="img-fluid rounded-start h-100" 
                                              style="object-fit: cover;"
-                                             alt="{{ $rekomendasi->nama }}">
+                                             alt="{{ $rekomendasi->nama }}"
+                                             loading="lazy">
                                     @else
                                         <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300" 
                                              class="img-fluid rounded-start h-100" 
                                              style="object-fit: cover;"
-                                             alt="{{ $rekomendasi->nama }}">
+                                             alt="{{ $rekomendasi->nama }}"
+                                             loading="lazy">
                                     @endif
                                 </div>
-                                <div class="col-8">
+                                <div class="col-12 col-sm-8">
                                     <div class="card-body py-2 px-3">
                                         <h6 class="card-title mb-1 text-dark">{{ $rekomendasi->nama }}</h6>
                                         <p class="card-text">
@@ -263,7 +269,7 @@
                     <div class="carousel-inner">
                         @foreach($destinasi->fotos as $index => $foto)
                         <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                            <img src="{{ asset('storage/'.$foto->foto) }}" class="d-block w-100" alt="{{ $destinasi->nama }}">
+                            <img src="{{ asset('storage/'.$foto->foto) }}" class="d-block w-100" alt="{{ $destinasi->nama }}" loading="lazy">
                         </div>
                         @endforeach
                     </div>

@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Boat\StoreBoatRequest;
+use App\Http\Requests\Boat\UpdateBoatRequest;
 use App\Models\Boat;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Services\BoatService;
 
 class BoatController extends Controller
 {
+    public function __construct(private readonly BoatService $boatService)
+    {
+    }
+
     public function index()
     {
-        $boats = Boat::latest()->paginate(10);
+        $boats = $this->boatService->paginate();
+
         return view('admin.boat.index', compact('boats'));
     }
 
@@ -19,21 +25,9 @@ class BoatController extends Controller
         return view('admin.boat.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreBoatRequest $request)
     {
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'kapasitas' => 'required|integer|min:1',
-            'harga_sewa' => 'required|numeric|min:0',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'is_active' => 'boolean'
-        ]);
-
-        if ($request->hasFile('foto')) {
-            $validated['foto'] = $request->file('foto')->store('boats', 'public');
-        }
-
-        Boat::create($validated);
+        $this->boatService->create($request->validated(), $request->file('foto'));
 
         return redirect()->route('boats.index')
             ->with('success', 'Boat berhasil ditambahkan!');
@@ -49,25 +43,9 @@ class BoatController extends Controller
         return view('admin.boat.edit', compact('boat'));
     }
 
-    public function update(Request $request, Boat $boat)
+    public function update(UpdateBoatRequest $request, Boat $boat)
     {
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'kapasitas' => 'required|integer|min:1',
-            'harga_sewa' => 'required|numeric|min:0',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'is_active' => 'boolean'
-        ]);
-
-        if ($request->hasFile('foto')) {
-            // Delete old foto
-            if ($boat->foto) {
-                Storage::disk('public')->delete($boat->foto);
-            }
-            $validated['foto'] = $request->file('foto')->store('boats', 'public');
-        }
-
-        $boat->update($validated);
+        $this->boatService->update($boat, $request->validated(), $request->file('foto'));
 
         return redirect()->route('boats.index')
             ->with('success', 'Boat berhasil diperbarui!');
@@ -75,12 +53,7 @@ class BoatController extends Controller
 
     public function destroy(Boat $boat)
     {
-        // Delete foto if exists
-        if ($boat->foto) {
-            Storage::disk('public')->delete($boat->foto);
-        }
-
-        $boat->delete();
+        $this->boatService->delete($boat);
 
         return redirect()->route('boats.index')
             ->with('success', 'Boat berhasil dihapus!');

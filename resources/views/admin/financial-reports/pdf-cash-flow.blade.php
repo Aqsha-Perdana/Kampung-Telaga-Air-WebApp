@@ -58,13 +58,25 @@
             </tr>
             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
             <tr>
-                <td class="indent-2">via {{ ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
+                <td class="indent-2">via {{ $method === 'stripe' ? 'Credit/Debit Card (Stripe)' : ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
                 <td class="text-right">{{ number_format($data['amount'], 2) }}</td>
             </tr>
             @endforeach
             <tr>
-                <td class="indent-1">Cash Payments to Suppliers & Employees</td>
-                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['to_suppliers'] + $cashFlow['operating_activities']['cash_payments']['operating_expenses'], 2) }})</td>
+                <td class="indent-1">Cash Payments to Suppliers & Service Providers</td>
+                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['to_suppliers'], 2) }})</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Refunds Paid to Customers ({{ $cashFlow['operating_activities']['cash_payments']['refund_transactions'] }} transactions)</td>
+                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['refunds_to_customers'], 2) }})</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Cash Payments for Operating Expenses</td>
+                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['operating_expenses'], 2) }})</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Total Cash Payments</td>
+                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['to_suppliers'] + $cashFlow['operating_activities']['cash_payments']['refunds_to_customers'] + $cashFlow['operating_activities']['cash_payments']['operating_expenses'], 2) }})</td>
             </tr>
             <tr class="highlight-row">
                 <td>Net Cash from Operating Activities</td>
@@ -120,8 +132,8 @@
             <div style="font-size: 8pt; margin-bottom: 5px;">CASH POSITION (MYR)</div>
             <table style="color: white; margin: 0; border: none;">
                 <tr style="border: none;">
-                    <td style="border: none; padding: 2px;">Opening: <b>{{ number_format($cashFlow['cash_reconciliation']['opening_balance'], 0) }}</b></td>
-                    <td style="border: none; padding: 2px;">Closing: <b>{{ number_format($cashFlow['cash_reconciliation']['closing_balance'], 0) }}</b></td>
+                    <td style="border: none; padding: 2px;">Opening: <b>{{ number_format($cashFlow['cash_reconciliation']['opening_balance'], 2) }}</b></td>
+                    <td style="border: none; padding: 2px;">Closing: <b>{{ number_format($cashFlow['cash_reconciliation']['closing_balance'], 2) }}</b></td>
                 </tr>
             </table>
         </div>
@@ -131,10 +143,10 @@
             <table style="margin: 0; font-size: 7.5pt;">
                 <tr>
                     <td>Total Trans: <b>{{ $cashFlow['statistics']['total_transactions'] }}</b></td>
-                    <td>Burn Rate: <b>{{ number_format($cashFlow['operating_activities']['cash_payments']['operating_expenses'], 0) }}</b></td>
+                    <td>Burn Rate: <b>{{ number_format($cashFlow['operating_activities']['cash_payments']['operating_expenses'], 2) }}</b></td>
                 </tr>
                 <tr>
-                    <td>Net Growth: <b>{{ number_format($cashFlow['cash_summary']['net_increase_in_cash'], 0) }}</b></td>
+                    <td>Net Growth: <b>{{ number_format($cashFlow['cash_summary']['net_increase_in_cash'], 2) }}</b></td>
                     <td>Status: <b>{{ $cashFlow['cash_summary']['net_increase_in_cash'] >= 0 ? 'SURPLUS' : 'DEFICIT' }}</b></td>
                 </tr>
             </table>
@@ -153,3 +165,4 @@
     </div>
 </body>
 </html>
+

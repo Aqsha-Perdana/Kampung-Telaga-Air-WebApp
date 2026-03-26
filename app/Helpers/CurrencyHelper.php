@@ -11,6 +11,17 @@ if (!function_exists('format_ringgit')) {
     }
 }
 
+if (!function_exists('format_ringgit_report')) {
+    function format_ringgit_report($amount)
+    {
+        if ($amount === null) {
+            return 'RM 0.00';
+        }
+
+        return 'RM ' . number_format((float) $amount, 2, '.', ',');
+    }
+}
+
 if (!function_exists('format_rupiah')) {
     function format_rupiah($amount)
     {

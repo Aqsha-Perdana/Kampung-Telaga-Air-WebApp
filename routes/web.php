@@ -21,9 +21,16 @@ use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FinancialReportController;
 use App\Http\Controllers\SalesController;
+use App\Models\Admin;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Auth\WisatawanAuthController;
 use App\Http\Controllers\Admin\CalendarController;
+use App\Http\Controllers\Visitor\ProfileController;
+use App\Http\Controllers\Admin\AdminProfileController;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\AICenterController;
+use App\Http\Controllers\Admin\AdminNotificationController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -38,18 +45,38 @@ use App\Http\Controllers\Admin\CalendarController;
 // Wisatawan Authentication Routes
 Route::prefix('visitor')->group(function () {
     Route::get('/login-visitor', [WisatawanAuthController::class, 'showLoginForm'])->name('wisatawan.login');
-    Route::post('/login-visitor', [WisatawanAuthController::class, 'login'])->name('wisatawan.login.post');
+    Route::post('/login-visitor', [WisatawanAuthController::class, 'login'])
+        ->middleware('throttle:visitor-login')
+        ->name('wisatawan.login.post');
     Route::post('/logout', [WisatawanAuthController::class, 'logout'])->name('wisatawan.logout');
     
     Route::get('/register', [WisatawanAuthController::class, 'showRegisterForm'])->name('wisatawan.register');
-    Route::post('/register', [WisatawanAuthController::class, 'register'])->name('wisatawan.register.post');
-    
-    Route::get('/forgot-password', [WisatawanAuthController::class, 'showForgotPasswordForm'])->name('wisatawan.password.request');
-    Route::post('/forgot-password', [WisatawanAuthController::class, 'sendResetLinkEmail'])->name('wisatawan.password.email');
-    
-    Route::get('/reset-password/{token}', [WisatawanAuthController::class, 'showResetForm'])->name('wisatawan.password.reset');
-    Route::post('/reset-password', [WisatawanAuthController::class, 'resetPassword'])->name('wisatawan.password.update');
+    Route::post('/register', [WisatawanAuthController::class, 'register'])
+        ->middleware('throttle:visitor-register')
+        ->name('wisatawan.register.post');
+
+    Route::middleware('auth')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'show'])->name('wisatawan.profile');
+        Route::put('/profile', [ProfileController::class, 'update'])->name('wisatawan.profile.update');
+        Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('wisatawan.profile.password.update');
+    });
 });
+
+// Global reset password route required by Laravel default reset notification.
+// This project only enables reset-password flow for admin accounts.
+Route::get('/reset-password/{token}', function (Request $request, $token) {
+    $email = (string) $request->query('email', '');
+
+    if ($email !== '' && Admin::where('email', $email)->exists()) {
+        return redirect()->route('admin.password.reset', [
+            'token' => $token,
+            'email' => $email,
+        ]);
+    }
+
+    return redirect()->route('wisatawan.login')
+        ->withErrors(['email' => 'Password reset is not available for visitor accounts.']);
+})->name('password.reset');
 
 //Landing Page
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
@@ -59,10 +86,12 @@ Route::get('/tour-package/{id}', [LandingPageController::class, 'detailPaket'])-
 Route::get('/destination/{id}', [LandingPageController::class, 'detailDestinasi'])
      ->name('landing.detail-destinasi');
 // Chatbot Route
-Route::post('/chatbot/send', [ChatbotController::class, 'sendMessage'])->name('chatbot.send');
+Route::post('/chatbot/send', [ChatbotController::class, 'sendMessage'])
+    ->middleware('throttle:chatbot')
+    ->name('chatbot.send');
 
 // Navigasi Menu    
-Route::get('/package-tour', [PaketWisataLandingController::class, 'index'])->name('landing.paket-wisata');
+Route::get('/package-tour', [PaketWisataLandingController::class, 'index'])->name('landing.package-tour');
 Route::get('/kiosk', [KioskLandingController::class, 'index'])->name('landing.kiosk');
 Route::get('/kiosk/{id_kiosk}', [KioskLandingController::class, 'show'])->name('landing.kiosk.show');
 Route::get('/culinary', [CulinaryLandingController::class, 'index'])->name('landing.culinary');
@@ -83,11 +112,20 @@ Route::get('/view360/{footage360}', [App\Http\Controllers\View360Controller::cla
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest:admin')->group(function () {
         Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login'); // hapus admin. nya
-        Route::post('/login', [AdminAuthController::class, 'login'])->name('login.submit'); // hapus admin. nya
+        Route::post('/login', [AdminAuthController::class, 'login'])
+            ->middleware('throttle:admin-login')
+            ->name('login.submit'); // hapus admin. nya
+        Route::get('/forgot-password', [AdminAuthController::class, 'showForgotPasswordForm'])->name('password.request');
+        Route::post('/forgot-password', [AdminAuthController::class, 'sendResetLinkEmail'])->name('password.email');
+        Route::get('/reset-password/{token}', [AdminAuthController::class, 'showResetForm'])->name('password.reset');
+        Route::post('/reset-password', [AdminAuthController::class, 'resetPassword'])->name('password.update');
     });
 
     Route::middleware('auth:admin')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+        Route::get('/profile', [AdminProfileController::class, 'show'])->name('profile');
+        Route::put('/profile', [AdminProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/password', [AdminProfileController::class, 'updatePassword'])->name('profile.password.update');
     });
 });
 
@@ -105,6 +143,12 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
     Route::get('/calendar/events', [CalendarController::class, 'getEvents']);
     Route::get('/calendar/date-detail', [CalendarController::class, 'getDateDetail']);
     Route::get('/calendar/statistics', [CalendarController::class, 'getStatistics']);
+    Route::get('/calendar/resource-availability', [CalendarController::class, 'getResourceAvailability']);
+    Route::get('/calendar/conflict-alerts', [CalendarController::class, 'getConflictAlerts']);
+    Route::get('/ai-center', [AICenterController::class, 'index'])->name('admin.ai-center.index');
+    Route::get('/notifications', [AdminNotificationController::class, 'index'])->name('admin.notifications.index');
+    Route::get('/notifications/feed', [AdminNotificationController::class, 'feed'])->name('admin.notifications.feed');
+    Route::post('/notifications/mark-read', [AdminNotificationController::class, 'markAllRead'])->name('admin.notifications.mark-read');
     // Master Data - Only accessible by 'admin' role
     Route::middleware(['check.admin.role:master-data'])->group(function () {
         Route::resource('destinasis', DestinasiController::class);
@@ -114,17 +158,23 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
         Route::resource('kiosks', KioskController::class);
         Route::resource('beban-operasional', BebanOperasionalController::class);
         Route::resource('footage360', Footage360Controller::class);
+        Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+        Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('admin.users.show');
+        Route::put('/users/{user}/password', [AdminUserController::class, 'updatePassword'])->name('admin.users.password.update');
     });
     
     // Transaction - Only accessible by 'admin' role
     Route::middleware(['check.admin.role:transaction'])->group(function () {
-        Route::resource('paket-wisata', PaketWisataController::class);
+        // Generate Content AI
+    Route::post('paket-wisata/generate-content', [PaketWisataController::class, 'generateContent'])->name('paket-wisata.generate-content');
+
+    Route::resource('paket-wisata', PaketWisataController::class);
         Route::post('/paket-wisata/calculate-price', [PaketWisataController::class, 'calculatePrice'])
             ->name('paket-wisata.calculate-price');
         
         Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
         Route::get('/sales/{orderId}', [SalesController::class, 'show'])->name('sales.detail');
-        Route::get('/admin/sales/manifest/{id_order}', [SalesController::class, 'downloadManifest'])
+        Route::get('/sales/manifest/{id_order}', [SalesController::class, 'downloadManifest'])
         ->name('admin.sales.manifest');
     });
     
@@ -132,9 +182,18 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
     Route::middleware(['check.admin.role:financial'])->group(function () {
         Route::get('financial-reports', [FinancialReportController::class, 'index'])
             ->name('financial-reports.index');
-        Route::get('financial-reports/{type}/{id}', [FinancialReportController::class, 'ownerReport'])
+
+        // Canonical Owner Detail Route
+        Route::get('financial-reports/owner/{type}/{id}', [FinancialReportController::class, 'ownerDetail'])
             ->name('financial-reports.owner');
-            // Export Profit & Loss PDF
+
+        // Legacy aliases kept for backward compatibility
+        Route::get('financial-reports/{type}/{id}', [FinancialReportController::class, 'ownerReport'])
+            ->name('financial-reports.owner.legacy');
+        Route::get('owner/{type}/{id}', [FinancialReportController::class, 'ownerDetail'])
+            ->name('financial-reports.owner.short');
+
+        // Export Profit & Loss PDF
         Route::get('/financial-reports/export-profit-loss-pdf', [FinancialReportController::class, 'exportProfitLossPdf'])
             ->name('financial-reports.export-profit-loss-pdf');
         
@@ -145,12 +204,6 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
         // Export Excel
         Route::get('/financial-reports/export-excel', [FinancialReportController::class, 'exportExcel'])
             ->name('financial-reports.export-excel');
-        
-        // Owner Detail Report (if needed)
-        Route::get('/financial-reports/owner/{type}/{id}', [FinancialReportController::class, 'ownerDetail'])
-            ->name('financial-reports.owner');
-
-        Route::get('owner/{type}/{id}', [FinancialReportController::class, 'ownerDetail'])->name('financial-reports.owner');
         Route::get('owner/{type}/{id}/pdf', [FinancialReportController::class, 'exportOwnerPDF'])->name('financial-reports.owner.pdf');
         Route::get('owner/{type}/{id}/excel', [FinancialReportController::class, 'exportOwnerExcel'])->name('financial-reports.owner.excel');
     });
@@ -180,7 +233,9 @@ Route::middleware(['auth'])->prefix('checkout')->name('checkout.')->group(functi
     Route::get('/', [CheckoutController::class, 'index'])->name('index');
     
     // Payment processing
-    Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+    Route::post('/process', [CheckoutController::class, 'process'])
+        ->middleware('throttle:checkout-process')
+        ->name('process');
     
     // Success & Failed pages
     Route::get('/success', [CheckoutController::class, 'success'])->name('success');
@@ -203,6 +258,15 @@ Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function (
     
     // Download invoice
     Route::get('/{id_order}/invoice', [CheckoutController::class, 'invoice'])->name('invoice');
+
+    // Request Refund
+    Route::post('/{id_order}/refund', [CheckoutController::class, 'requestRefund'])->name('refund.request');
+});
+
+// Admin Refund Routes
+Route::middleware(['auth:admin'])->prefix('admin/sales')->name('admin.sales.')->group(function () {
+    Route::post('/{id_order}/refund/approve', [SalesController::class, 'approveRefund'])->name('refund.approve');
+    Route::post('/{id_order}/refund/reject', [SalesController::class, 'rejectRefund'])->name('refund.reject');
 });
 
 // ==========================================
@@ -211,7 +275,8 @@ Route::middleware(['auth'])->prefix('orders')->name('orders.')->group(function (
 Route::middleware(['auth'])->prefix('api')->group(function () {
     
     // Check order status (untuk polling di checkout success page)
-    Route::get('/order-status/{orderId}', [CheckoutController::class, 'checkStatus']);
+    Route::get('/order-status/{orderId}', [CheckoutController::class, 'checkStatus'])
+        ->middleware('throttle:order-status');
 });
 
 // ==========================================
@@ -226,106 +291,7 @@ Route::get('/invoice/{order}', [OrderController::class, 'download'])
     ->name('invoice.download');
 
 
-Route::get('/upload-test', function() {
-    return '
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Upload Test</title>
-        <style>
-            body { font-family: Arial; padding: 50px; }
-            .result { background: #f0f0f0; padding: 20px; margin-top: 20px; }
-        </style>
-    </head>
-    <body>
-        <h1>Test Upload File 360°</h1>
-        <form action="/upload-test-process" method="POST" enctype="multipart/form-data">
-            '.csrf_field().'
-            <input type="file" name="file" required>
-            <br><br>
-            <button type="submit">Test Upload</button>
-        </form>
-    </body>
-    </html>
-    ';
-});
 
-Route::post('/upload-test-process', function(\Illuminate\Http\Request $request) {
-    try {
-        echo "<h2>PHP Upload Config:</h2>";
-        echo "<pre>";
-        echo "upload_max_filesize: " . ini_get('upload_max_filesize') . "\n";
-        echo "post_max_size: " . ini_get('post_max_size') . "\n";
-        echo "max_execution_time: " . ini_get('max_execution_time') . "\n";
-        echo "memory_limit: " . ini_get('memory_limit') . "\n";
-        echo "</pre>";
-        
-        echo "<h2>Request Info:</h2>";
-        echo "<pre>";
-        echo "Has file: " . ($request->hasFile('file') ? 'YES' : 'NO') . "\n";
-        echo "All files: " . print_r($request->allFiles(), true) . "\n";
-        echo "</pre>";
-        
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            
-            echo "<h2>File Info:</h2>";
-            echo "<pre>";
-            echo "Is Valid: " . ($file->isValid() ? 'YES' : 'NO') . "\n";
-            echo "Filename: " . $file->getClientOriginalName() . "\n";
-            echo "Size: " . number_format($file->getSize() / 1024 / 1024, 2) . " MB\n";
-            echo "MIME Type: " . $file->getMimeType() . "\n";
-            echo "Extension: " . $file->getClientOriginalExtension() . "\n";
-            echo "Real Path: " . $file->getRealPath() . "\n";
-            echo "Error: " . $file->getError() . "\n";
-            echo "</pre>";
-            
-            echo "<h2>Cloudinary Config:</h2>";
-            echo "<pre>";
-            echo "Cloud Name: " . config('cloudinary.cloud_name') . "\n";
-            echo "API Key: " . config('cloudinary.api_key') . "\n";
-            echo "API Secret: " . (config('cloudinary.api_secret') ? substr(config('cloudinary.api_secret'), 0, 5) . '***' : 'NOT SET') . "\n";
-            echo "</pre>";
-            
-            // Test upload ke Cloudinary
-            echo "<h2>Testing Upload to Cloudinary...</h2>";
-            echo "<pre>";
-            
-            try {
-                $uploaded = \CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary::upload(
-                    $file->getRealPath(),
-                    [
-                        'folder' => 'test-upload',
-                        'resource_type' => 'auto'
-                    ]
-                );
-                
-                echo "✅ SUCCESS!\n\n";
-                echo "URL: " . $uploaded->getSecurePath() . "\n";
-                echo "Public ID: " . $uploaded->getPublicId() . "\n";
-                echo "\n<img src='" . $uploaded->getSecurePath() . "' style='max-width: 500px; margin-top: 20px;'>";
-                
-            } catch (\Exception $e) {
-                echo "❌ FAILED!\n\n";
-                echo "Error: " . $e->getMessage() . "\n";
-                echo "Error Class: " . get_class($e) . "\n";
-            }
-            
-            echo "</pre>";
-            
-        } else {
-            echo "<h2 style='color: red;'>❌ NO FILE RECEIVED!</h2>";
-            echo "<pre>";
-            echo "POST data: " . print_r($_POST, true) . "\n";
-            echo "FILES data: " . print_r($_FILES, true) . "\n";
-            echo "</pre>";
-        }
-        
-    } catch (\Exception $e) {
-        echo "<h2 style='color: red;'>ERROR:</h2>";
-        echo "<pre>" . $e->getMessage() . "</pre>";
-        echo "<pre>" . $e->getTraceAsString() . "</pre>";
-    }
-});
 
     
+

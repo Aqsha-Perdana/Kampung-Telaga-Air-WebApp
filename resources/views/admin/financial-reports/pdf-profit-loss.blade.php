@@ -92,13 +92,26 @@
                 <td class="text-right">{{ number_format($profitLoss['operating_profit']['amount'], 2) }}</td>
             </tr>
 
+            <tr class="section-header"><td colspan="2">OTHER INCOME / (EXPENSES)</td></tr>
             <tr>
-                <td class="indent-1">Other Income / (Expenses), Net</td>
-                <td class="text-right">{{ number_format($profitLoss['other_items']['other_income'] - $profitLoss['other_items']['other_expenses'], 2) }}</td>
+                <td class="indent-1">Refund Fee Income</td>
+                <td class="text-right">{{ number_format($profitLoss['other_items']['refund_fee_income'], 2) }}</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Total Other Income</td>
+                <td class="text-right">{{ number_format($profitLoss['other_items']['other_income'], 2) }}</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Other Expenses</td>
+                <td class="text-right text-danger">({{ number_format($profitLoss['other_items']['other_expenses'], 2) }})</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Net Other Income / (Expenses)</td>
+                <td class="text-right">{{ number_format($profitLoss['other_items']['net_other_items'], 2) }}</td>
             </tr>
             <tr class="fw-bold">
                 <td>PROFIT BEFORE TAX</td>
-                <td class="text-right">{{ number_format($profitLoss['operating_profit']['amount'] + ($profitLoss['other_items']['other_income'] - $profitLoss['other_items']['other_expenses']), 2) }}</td>
+                <td class="text-right">{{ number_format($profitLoss['profit_before_tax']['amount'], 2) }}</td>
             </tr>
             <tr>
                 <td class="indent-1">Income Tax Expense</td>

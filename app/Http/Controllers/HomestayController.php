@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Homestay\StoreHomestayRequest;
+use App\Http\Requests\Homestay\UpdateHomestayRequest;
 use App\Models\Homestay;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Services\HomestayService;
 
 class HomestayController extends Controller
 {
+    public function __construct(private readonly HomestayService $homestayService)
+    {
+    }
+
     public function index()
     {
-        $homestays = Homestay::latest()->paginate(10);
+        $homestays = $this->homestayService->paginate();
+
         return view('admin.homestay.index', compact('homestays'));
     }
 
@@ -19,21 +25,9 @@ class HomestayController extends Controller
         return view('admin.homestay.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreHomestayRequest $request)
     {
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'kapasitas' => 'required|integer|min:1',
-            'harga_per_malam' => 'required|numeric|min:0',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'is_active' => 'boolean'
-        ]);
-
-        if ($request->hasFile('foto')) {
-            $validated['foto'] = $request->file('foto')->store('homestays', 'public');
-        }
-
-        Homestay::create($validated);
+        $this->homestayService->create($request->validated(), $request->file('foto'));
 
         return redirect()->route('homestays.index')
             ->with('success', 'Homestay berhasil ditambahkan!');
@@ -49,25 +43,9 @@ class HomestayController extends Controller
         return view('admin.homestay.edit', compact('homestay'));
     }
 
-    public function update(Request $request, Homestay $homestay)
+    public function update(UpdateHomestayRequest $request, Homestay $homestay)
     {
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'kapasitas' => 'required|integer|min:1',
-            'harga_per_malam' => 'required|numeric|min:0',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'is_active' => 'boolean'
-        ]);
-
-        if ($request->hasFile('foto')) {
-            // Delete old foto
-            if ($homestay->foto) {
-                Storage::disk('public')->delete($homestay->foto);
-            }
-            $validated['foto'] = $request->file('foto')->store('homestays', 'public');
-        }
-
-        $homestay->update($validated);
+        $this->homestayService->update($homestay, $request->validated(), $request->file('foto'));
 
         return redirect()->route('homestays.index')
             ->with('success', 'Homestay berhasil diperbarui!');
@@ -75,12 +53,7 @@ class HomestayController extends Controller
 
     public function destroy(Homestay $homestay)
     {
-        // Delete foto if exists
-        if ($homestay->foto) {
-            Storage::disk('public')->delete($homestay->foto);
-        }
-
-        $homestay->delete();
+        $this->homestayService->delete($homestay);
 
         return redirect()->route('homestays.index')
             ->with('success', 'Homestay berhasil dihapus!');

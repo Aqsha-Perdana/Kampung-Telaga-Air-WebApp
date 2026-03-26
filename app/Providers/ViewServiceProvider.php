@@ -14,12 +14,27 @@ class ViewServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer('*', function ($view) {
-            $cartCount = Auth::check()
-                ? Cart::where('user_id', Auth::id())->count()
-                : 0;
+        // Only frontend nav components need cart count.
+        View::composer([
+            'landing.partials.navbar',
+            'landing.partials.mobile-bottom-nav',
+        ], function ($view) {
+            static $resolvedCartCount = null;
 
-            $view->with('cartCount', $cartCount);
+            if ($resolvedCartCount === null) {
+                $resolvedCartCount = 0;
+
+                if (Auth::check()) {
+                    $resolvedCartCount = Cart::where('user_id', Auth::id())->count();
+                } else {
+                    $sessionCartId = session('cart_session_id');
+                    if ($sessionCartId) {
+                        $resolvedCartCount = Cart::where('session_id', $sessionCartId)->count();
+                    }
+                }
+            }
+
+            $view->with('cartCount', $resolvedCartCount);
         });
     }
 }

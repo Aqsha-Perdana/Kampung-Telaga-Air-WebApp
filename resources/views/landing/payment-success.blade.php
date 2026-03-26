@@ -76,7 +76,7 @@
                                 <div class="row mb-2">
                                     <div class="col-4 text-muted">Payment Method:</div>
                                     <div class="col-8">
-                                        <strong class="text-capitalize">{{ $order->payment_method }}</strong>
+                                        <strong>Credit/Debit Card (Stripe)</strong>
                                     </div>
                                 </div>
 
@@ -227,7 +227,7 @@
                                 </p>
                                 @endif
                                 <p class="mb-0">
-                                    <strong>Method:</strong> {{ ucfirst($order->payment_method) }}
+                                    <strong>Method:</strong> Credit/Debit Card (Stripe)
                                 </p>
                             </div>
 
@@ -297,7 +297,7 @@
 @push('scripts')
 <script>
     let pendingRefreshCount = 0;
-    const maxPendingRefresh = 30; // 30 attempts × 5 seconds = 2.5 minutes
+    const maxPendingRefresh = 20; // 20 attempts × 3 seconds = 1 minute
     
     function checkPendingStatus() {
         if (pendingRefreshCount >= maxPendingRefresh) {
@@ -311,7 +311,7 @@
         
         setTimeout(() => {
             location.reload();
-        }, 5000); // Refresh every 5 seconds
+        }, 3000); // Refresh every 3 seconds
     }
     
     checkPendingStatus();

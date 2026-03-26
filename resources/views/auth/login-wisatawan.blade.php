@@ -3,13 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Wisatawan - Kampung Telaga Air</title>
+    <title>Login Visitor - Kampung Telaga Air</title>
     <link rel="shortcut icon" type="image/png" href="{{ asset('assets/images/logos/logo.png') }}" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('assets/css/login-wisatawan.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/login.css') }}">
+    <style>
+        body {
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+
+        body.page-enter {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        body.page-ready {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        body.page-exit {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        .register-link {
+            margin-top: 18px;
+            text-align: center;
+        }
+
+        .register-link p {
+            margin: 0 0 10px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .btn-register {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 180px;
+            padding: 11px 16px;
+            border-radius: 10px;
+            border: 1.5px solid #2a93cc;
+            background: #f0f9ff;
+            color: #247eaf;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-register:hover {
+            background: linear-gradient(135deg, #96defb 0%, #2a93cc 100%);
+            color: #ffffff;
+            border-color: #2a93cc;
+            transform: translateY(-1px);
+        }
+    </style>
 </head>
-<body>
+<body class="page-enter">
     <div class="login-wrapper">
         <!-- Left Section -->
         <div class="left-section">
@@ -22,7 +77,7 @@
                 </div>
                 
                 <h1>Welcome, Visitor</h1>
-                <p>Kampung Telaga Air</p>
+                <p>Tourism Service Platform<br>Kampung Telaga Air</p>
             </div>
         </div>
 
@@ -44,21 +99,18 @@
 
                 @if($errors->any())
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                        <div>
-                            <ul class="mb-0">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        <span>
+                            @foreach($errors->all() as $error)
+                                {{ $error }}
+                            @endforeach
+                        </span>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 @endif
 
                 <form action="{{ route('wisatawan.login.post') }}" method="POST" id="loginForm">
-                    @csrf
-
+                    @csrf                    
                     <div class="mb-4">
                         <label class="form-label">Email</label>
                         <div class="input-wrapper">
@@ -66,7 +118,7 @@
                             <input type="email" 
                                    class="form-control @error('email') is-invalid @enderror" 
                                    name="email" 
-                                   placeholder="name@example.com"
+                                   placeholder="name@email.com"
                                    value="{{ old('email') }}"
                                    required 
                                    autofocus>
@@ -87,45 +139,44 @@
                         </div>
                     </div>
 
-                    <div class="form-check">
+                    <div class="form-check d-flex justify-content-between align-items-center">
                         <div>
                             <input class="form-check-input" type="checkbox" name="remember" id="remember">
                             <label class="form-check-label" for="remember">
                                 Remember Me
                             </label>
                         </div>
-                        <div class="forgot-password">
-                            <a href="{{ route('wisatawan.password.request') }}">Forgot Password?</a>
-                        </div>
                     </div>
 
-                    <button type="submit" class="btn-login">
-                        <i class="bi bi-box-arrow-in-right"></i>
-                        Login
+                    <button type="submit" class="btn btn-login">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Login
                     </button>
                 </form>
 
                 <div class="register-link">
-                    <p>Don't have an account yet? <a href="{{ route('wisatawan.register') }}">Register Now</a></p>
+                    <p>Don't have an account yet?</p>
+                    <a href="{{ route('wisatawan.register') }}" class="btn-register js-page-transition">
+                        <i class="bi bi-person-plus"></i>
+                        Register Now
+                    </a>
                 </div>
 
                 <div class="back-link">
-                    <a href="{{ url('/') }}">
-                        <i class="bi bi-arrow-left"></i>
-                        Back to Home Page
+                    <a href="{{ url('/') }}" class="js-page-transition">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Home
                     </a>
                 </div>
 
                 <div class="footer-text">
                     <p>
                         <i class="bi bi-shield-lock-fill"></i>
-                        Protected with end-to-end encryption
+                       Protected with end-to-end encryption
                     </p>
                 </div>
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Toggle password visibility
@@ -142,31 +193,32 @@
         // Form submission animation
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             const btn = this.querySelector('.btn-login');
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
             btn.disabled = true;
         });
 
-        // Auto dismiss alerts
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                alert.style.transition = 'opacity 0.5s ease';
-                alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 500);
-            });
-        }, 5000);
+        requestAnimationFrame(() => document.body.classList.add('page-ready'));
 
-        document.addEventListener('DOMContentLoaded', function() {
-        @if(session('success'))
-            Swal.fire({
-                title: 'Success!',
-                text: "{{ session('success') }}",
-                icon: 'success',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#3085d6', // Warna biru standar
+        document.querySelectorAll('.js-page-transition').forEach((link) => {
+            link.addEventListener('click', function (event) {
+                if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                    return;
+                }
+
+                const href = this.getAttribute('href');
+                if (!href || href.startsWith('#')) {
+                    return;
+                }
+
+                event.preventDefault();
+                document.body.classList.remove('page-ready');
+                document.body.classList.add('page-exit');
+
+                setTimeout(() => {
+                    window.location.href = href;
+                }, 180);
             });
-        @endif
-    });
+        });
     </script>
 </body>
 </html>

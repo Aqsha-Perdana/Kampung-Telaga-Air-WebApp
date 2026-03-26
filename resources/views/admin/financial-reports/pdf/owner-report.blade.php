@@ -149,7 +149,7 @@
         </div>
         <div class="summary-box">
             <h3>RM {{ number_format($report['total_revenue'], 2) }}</h3>
-            <p>Total Revenue</p>
+            <p>Owner Revenue</p>
         </div>
     </div>
 
@@ -166,7 +166,7 @@
                 @if(isset($report['total_units']))
                 <th class="text-center">{{ ucfirst($report['unit_name']) }}s</th>
                 @endif
-                <th class="text-right">Revenue</th>
+                <th class="text-right">Owner Revenue</th>
             </tr>
         </thead>
         <tbody>
@@ -174,14 +174,21 @@
             <tr>
                 <td>{{ $transaction->id_order }}</td>
                 <td>{{ $transaction->customer_name }}</td>
-                <td>{{ $transaction->nama_paket }}</td>
+                <td>
+                    {{ $transaction->nama_paket }}
+                    @if(isset($transaction->variant_name))
+                        <br><small style="color: #7f8c8d; font-style: italic;">{{ $transaction->variant_name }}</small>
+                    @endif
+                </td>
                 <td>{{ \Carbon\Carbon::parse($transaction->tanggal_keberangkatan)->format('d M Y') }}</td>
                 <td class="text-center">{{ $transaction->jumlah_peserta }}</td>
                 @if(isset($report['total_units']) && isset($transaction->jumlah_malam))
                 <td class="text-center">{{ $transaction->jumlah_malam }}</td>
                 @endif
                 <td class="text-right">
-                    @if(isset($transaction->jumlah_malam))
+                    @if(isset($transaction->variant_price))
+                        RM {{ number_format($transaction->variant_price, 2) }}
+                    @elseif(isset($transaction->jumlah_malam))
                         RM {{ number_format($transaction->jumlah_malam * $report['price_per_unit'], 2) }}
                     @else
                         RM {{ number_format($report['price_per_unit'], 2) }}
@@ -197,7 +204,7 @@
         @if($report['transactions']->count() > 0)
         <tfoot>
             <tr class="total-row">
-                <td colspan="{{ isset($report['total_units']) ? '6' : '5' }}" class="text-right">TOTAL REVENUE:</td>
+                <td colspan="{{ isset($report['total_units']) ? '6' : '5' }}" class="text-right">TOTAL OWNER REVENUE:</td>
                 <td class="text-right">RM {{ number_format($report['total_revenue'], 2) }}</td>
             </tr>
         </tfoot>
@@ -215,7 +222,7 @@
                     {{ number_format($report['total_participants'] / $report['usage_count'], 1) }} pax
                 </td>
                 <td width="33%">
-                    <strong>Avg. Revenue per Booking:</strong><br>
+                    <strong>Avg. Owner Revenue per Booking:</strong><br>
                     RM {{ number_format($report['total_revenue'] / $report['usage_count'], 2) }}
                 </td>
                 @if(isset($report['total_units']))

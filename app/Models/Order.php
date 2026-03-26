@@ -20,6 +20,7 @@ class Order extends Model
         'customer_email',
         'customer_phone',
         'customer_address',
+        'cart_signature',
         
         // PAYMENT AMOUNT - ALWAYS MYR
         'base_amount',      // Harga asli dalam MYR (SUMBER KEBENARAN)
@@ -39,10 +40,19 @@ class Order extends Model
         'is_redeemed',
         'resource_type',
         'resource_id',
+        'refund_reason',
+        'refund_rejected_reason',
+        'refund_amount',
+        'refund_fee',
+        'refund_status',
+        'stripe_refund_id',
+        'refunded_at',
+        'refund_failure_reason',
     ];
 
     protected $casts = [
         'paid_at' => 'datetime',
+        'refunded_at' => 'datetime',
         'is_redeemed' => 'boolean',
         'base_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',

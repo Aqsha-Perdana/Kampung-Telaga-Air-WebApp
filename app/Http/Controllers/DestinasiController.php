@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Destinasi\StoreDestinasiRequest;
+use App\Http\Requests\Destinasi\UpdateDestinasiRequest;
 use App\Models\Destinasi;
-use App\Models\FotoDestinasi;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
+use App\Services\DestinasiService;
 
 class DestinasiController extends Controller
 {
+    public function __construct(private readonly DestinasiService $destinasiService)
+    {
+    }
+
     public function index()
     {
-        $destinasis = Destinasi::with('fotos')->latest()->paginate(10);
+        $destinasis = $this->destinasiService->paginateWithFotos();
+
         return view('admin.destination.index', compact('destinasis'));
     }
 
@@ -21,140 +25,63 @@ class DestinasiController extends Controller
         return view('admin.destination.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreDestinasiRequest $request)
     {
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'lokasi' => 'required|string|max:255',
-            'deskripsi' => 'required|string',
-            'fotos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
-        ]);
-
-        DB::beginTransaction();
         try {
-            // Simpan destinasi
-            $destinasi = Destinasi::create([
-                'nama' => $validated['nama'],
-                'lokasi' => $validated['lokasi'],
-                'deskripsi' => $validated['deskripsi']
-            ]);
+            $this->destinasiService->create(
+                $request->validated(),
+                $request->file('fotos', [])
+            );
 
-            // Simpan multiple foto
-            if ($request->hasFile('fotos')) {
-                foreach ($request->file('fotos') as $index => $foto) {
-                    $path = $foto->store('destinasi', 'public');
-                    
-                    FotoDestinasi::create([
-                        'id_destinasi' => $destinasi->id_destinasi,
-                        'foto' => $path,
-                        'urutan' => $index + 1
-                    ]);
-                }
-            }
-
-            DB::commit();
             return redirect()->route('destinasis.index')
                 ->with('success', 'Destinasi berhasil ditambahkan!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
             return redirect()->back()
                 ->with('error', 'Gagal menambahkan destinasi: ' . $e->getMessage())
                 ->withInput();
         }
     }
 
-    public function show($id)
+    public function show(Destinasi $destinasi)
     {
-        $destinasi = Destinasi::with('fotos')->findOrFail($id);
+        $destinasi->load('fotos');
+
         return view('admin.destination.show', compact('destinasi'));
     }
 
-    public function edit($id)
+    public function edit(Destinasi $destinasi)
     {
-        $destinasi = Destinasi::with('fotos')->findOrFail($id);
+        $destinasi->load('fotos');
+
         return view('admin.destination.edit', compact('destinasi'));
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateDestinasiRequest $request, Destinasi $destinasi)
     {
-        $destinasi = Destinasi::findOrFail($id);
-
-        $validated = $request->validate([
-            'nama' => 'required|string|max:255',
-            'lokasi' => 'required|string|max:255',
-            'deskripsi' => 'required|string',
-            'fotos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'hapus_foto.*' => 'nullable|exists:foto_destinasis,id'
-        ]);
-
-        DB::beginTransaction();
         try {
-            // Update destinasi
-            $destinasi->update([
-                'nama' => $validated['nama'],
-                'lokasi' => $validated['lokasi'],
-                'deskripsi' => $validated['deskripsi']
-            ]);
+            $this->destinasiService->update(
+                $destinasi,
+                $request->validated(),
+                $request->file('fotos', [])
+            );
 
-            // Hapus foto yang dipilih
-            if ($request->has('hapus_foto')) {
-                foreach ($request->hapus_foto as $fotoId) {
-                    $foto = FotoDestinasi::find($fotoId);
-                    if ($foto) {
-                        Storage::disk('public')->delete($foto->foto);
-                        $foto->delete();
-                    }
-                }
-            }
-
-            // Tambah foto baru
-            if ($request->hasFile('fotos')) {
-                $lastUrutan = FotoDestinasi::where('id_destinasi', $destinasi->id_destinasi)
-                    ->max('urutan') ?? 0;
-
-                foreach ($request->file('fotos') as $index => $foto) {
-                    $path = $foto->store('destinasi', 'public');
-                    
-                    FotoDestinasi::create([
-                        'id_destinasi' => $destinasi->id_destinasi,
-                        'foto' => $path,
-                        'urutan' => $lastUrutan + $index + 1
-                    ]);
-                }
-            }
-
-            DB::commit();
             return redirect()->route('destinasis.index')
                 ->with('success', 'Destinasi berhasil diupdate!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
             return redirect()->back()
                 ->with('error', 'Gagal mengupdate destinasi: ' . $e->getMessage())
                 ->withInput();
         }
     }
 
-    public function destroy($id)
+    public function destroy(Destinasi $destinasi)
     {
-        $destinasi = Destinasi::findOrFail($id);
-
-        DB::beginTransaction();
         try {
-            // Hapus semua foto
-            foreach ($destinasi->fotos as $foto) {
-                Storage::disk('public')->delete($foto->foto);
-            }
+            $this->destinasiService->delete($destinasi);
 
-            $destinasi->delete(); // Cascade delete akan menghapus foto di database
-
-            DB::commit();
             return redirect()->route('destinasis.index')
                 ->with('success', 'Destinasi berhasil dihapus!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
             return redirect()->back()
                 ->with('error', 'Gagal menghapus destinasi: ' . $e->getMessage());
         }

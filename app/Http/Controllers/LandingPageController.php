@@ -53,12 +53,22 @@ class LandingPageController extends Controller
         return view('landing.detail-destinasi', compact('destinasi', 'rekomendasiDestinasi', 'paketTerkait'));
     }
     
-    public function paketWisata()
+    public function paketWisata(Request $request)
     {
-        $paketWisatas = PaketWisata::with(['destinasis', 'homestays', 'paketCulinaries', 'boats', 'kiosks'])
-                                   ->where('status', 'aktif')
-                                   ->paginate(6);
-        return view('landing.paket-wisata', compact('paketWisatas'));
+        $query = PaketWisata::with(['destinasis', 'homestays', 'paketCulinaries', 'boats', 'kiosks'])
+            ->where('status', 'aktif');
+
+        if ($request->filled('search')) {
+            $search = (string) $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_paket', 'like', '%' . $search . '%')
+                    ->orWhere('deskripsi', 'like', '%' . $search . '%');
+            });
+        }
+
+        $paketWisata = $query->orderByDesc('created_at')->paginate(6)->withQueryString();
+
+        return view('landing.paket-wisata.index', compact('paketWisata'));
     }
     
     public function detailPaket($id)

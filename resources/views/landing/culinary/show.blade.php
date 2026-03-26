@@ -55,7 +55,8 @@
                              class="w-100 h-100" 
                              style="object-fit: cover;"
                              alt="{{ $culinary->nama }}"
-                             id="mainImage">
+                             id="mainImage"
+                             loading="lazy">
                     </div>
                 </div>
             </div>
@@ -71,7 +72,8 @@
                         <img src="{{ asset('storage/' . $foto->foto) }}" 
                              class="w-100 h-100" 
                              style="object-fit: cover;"
-                             alt="{{ $culinary->nama }}">
+                             alt="{{ $culinary->nama }}"
+                             loading="lazy">
                     </div>
                 </div>
                 @endforeach
@@ -302,7 +304,8 @@
                             <img src="{{ asset('storage/' . $relatedFoto->foto) }}" 
                                  class="card-img-top h-100 w-100" 
                                  style="object-fit: cover;" 
-                                 alt="{{ $related->nama }}">
+                                 alt="{{ $related->nama }}"
+                                 loading="lazy">
                         @else
                             <div class="h-100 w-100 d-flex align-items-center justify-content-center bg-light">
                                 <i class="bi bi-shop text-muted" style="font-size: 3rem;"></i>

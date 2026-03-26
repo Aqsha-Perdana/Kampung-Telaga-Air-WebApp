@@ -82,8 +82,28 @@ class OrderController extends Controller
      * Download invoice
      */
     public function download(Order $order)
-{
-    $pdf = Pdf::loadView('invoice.pdf', compact('order'));
-    return $pdf->download('Invoice-'.$order->id_order.'.pdf');
-}
+    {
+        abort_unless($this->canAccessInvoice($order), 403);
+
+        $order->loadMissing('items.paket');
+
+        abort_if(
+            in_array($order->status, ['pending', 'failed', 'cancelled'], true),
+            422,
+            'Invoice is available after payment is completed.'
+        );
+
+        $pdf = Pdf::loadView('pdf.invoice', compact('order'));
+
+        return $pdf->download('Invoice-' . $order->id_order . '.pdf');
+    }
+
+    private function canAccessInvoice(Order $order): bool
+    {
+        if (Auth::guard('admin')->check()) {
+            return true;
+        }
+
+        return Auth::check() && (int) $order->user_id === (int) Auth::id();
+    }
 }

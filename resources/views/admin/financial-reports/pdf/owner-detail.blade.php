@@ -48,7 +48,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <p class="text-muted mb-1 small">Total Revenue</p>
-                            <h4 class="mb-0 fw-bold">{{ format_ringgit($profitLoss['revenue']['total_revenue']) }}</h4>
+                            <h4 class="mb-0 fw-bold">{{ format_ringgit_report($profitLoss['revenue']['total_revenue']) }}</h4>
                         </div>
                         <div class="text-primary">
                             <i class="ti ti-trending-up" style="font-size: 2.5rem;"></i>
@@ -63,7 +63,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <p class="text-muted mb-1 small">Gross Profit</p>
-                            <h4 class="mb-0 fw-bold">{{ format_ringgit($profitLoss['gross_profit']['amount']) }}</h4>
+                            <h4 class="mb-0 fw-bold">{{ format_ringgit_report($profitLoss['gross_profit']['amount']) }}</h4>
                             <small class="text-success">{{ number_format($profitLoss['gross_profit']['margin_percentage'], 1) }}% margin</small>
                         </div>
                         <div class="text-success">
@@ -79,7 +79,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <p class="text-muted mb-1 small">Operating Expenses</p>
-                            <h4 class="mb-0 fw-bold">{{ format_ringgit($profitLoss['operating_expenses']['total_operating_expenses']) }}</h4>
+                            <h4 class="mb-0 fw-bold">{{ format_ringgit_report($profitLoss['operating_expenses']['total_operating_expenses']) }}</h4>
                         </div>
                         <div class="text-warning">
                             <i class="ti ti-receipt" style="font-size: 2.5rem;"></i>
@@ -94,7 +94,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <p class="text-muted mb-1 small">Net Profit</p>
-                            <h4 class="mb-0 fw-bold">{{ format_ringgit($profitLoss['profit_for_period']['amount']) }}</h4>
+                            <h4 class="mb-0 fw-bold">{{ format_ringgit_report($profitLoss['profit_for_period']['amount']) }}</h4>
                             <small class="text-{{ $profitLoss['profit_for_period']['amount'] >= 0 ? 'success' : 'danger' }}">
                                 {{ number_format($profitLoss['profit_for_period']['margin_percentage'], 1) }}% margin
                             </small>
@@ -144,15 +144,15 @@
                             </tr>
                             <tr>
                                 <td class="ps-4">Tour Package Sales</td>
-                                <td class="text-end">{{ format_ringgit($profitLoss['revenue']['tour_package_sales']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['revenue']['tour_package_sales']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Other Revenue</td>
-                                <td class="text-end">{{ format_ringgit($profitLoss['revenue']['other_revenue']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['revenue']['other_revenue']) }}</td>
                             </tr>
                             <tr class="fw-bold border-top">
                                 <td class="ps-4">Total Revenue</td>
-                                <td class="text-end">{{ format_ringgit($profitLoss['revenue']['total_revenue']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['revenue']['total_revenue']) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -165,23 +165,23 @@
                             </tr>
                             <tr>
                                 <td class="ps-4">Boat Services</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['cost_of_sales']['boat_services']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['cost_of_sales']['boat_services']) }})</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Homestay Services</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['cost_of_sales']['homestay_services']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['cost_of_sales']['homestay_services']) }})</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Culinary Services</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['cost_of_sales']['culinary_services']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['cost_of_sales']['culinary_services']) }})</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Kiosk Services</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['cost_of_sales']['kiosk_services']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['cost_of_sales']['kiosk_services']) }})</td>
                             </tr>
                             <tr class="fw-bold border-top">
                                 <td class="ps-4">Total Cost of Sales</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['cost_of_sales']['total_cost_of_sales']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['cost_of_sales']['total_cost_of_sales']) }})</td>
                             </tr>
                         </tbody>
                     </table>
@@ -191,7 +191,7 @@
                         <tbody>
                             <tr class="table-success fw-bold">
                                 <td class="ps-4">GROSS PROFIT</td>
-                                <td class="text-end">{{ format_ringgit($profitLoss['gross_profit']['amount']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['gross_profit']['amount']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-5 text-muted small">Gross Profit Margin</td>
@@ -209,12 +209,12 @@
                             @foreach($profitLoss['operating_expenses']['by_nature'] as $category => $data)
                             <tr>
                                 <td class="ps-4">{{ $category }} <span class="badge bg-secondary">{{ $data['count'] }}x</span></td>
-                                <td class="text-end text-danger">({{ format_ringgit($data['amount']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($data['amount']) }})</td>
                             </tr>
                             @endforeach
                             <tr class="fw-bold border-top">
                                 <td class="ps-4">Total Operating Expenses</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['operating_expenses']['total_operating_expenses']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['operating_expenses']['total_operating_expenses']) }})</td>
                             </tr>
                         </tbody>
                     </table>
@@ -224,7 +224,7 @@
                         <tbody>
                             <tr class="table-info fw-bold">
                                 <td class="ps-4">OPERATING PROFIT (EBIT)</td>
-                                <td class="text-end">{{ format_ringgit($profitLoss['operating_profit']['amount']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['operating_profit']['amount']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-5 text-muted small">Operating Profit Margin</td>
@@ -241,11 +241,11 @@
                             </tr>
                             <tr>
                                 <td class="ps-4">Other Income</td>
-                                <td class="text-end">{{ format_ringgit($profitLoss['other_items']['other_income']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['other_items']['other_income']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Other Expenses</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['other_items']['other_expenses']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['other_items']['other_expenses']) }})</td>
                             </tr>
                         </tbody>
                     </table>
@@ -255,7 +255,7 @@
                         <tbody>
                             <tr class="table-warning fw-bold">
                                 <td class="ps-4">PROFIT BEFORE TAX</td>
-                                <td class="text-end">{{ format_ringgit($profitLoss['profit_before_tax']['amount']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['profit_before_tax']['amount']) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -268,15 +268,15 @@
                             </tr>
                             <tr>
                                 <td class="ps-4">Current Tax</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['tax_expense']['current_tax']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['tax_expense']['current_tax']) }})</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Deferred Tax</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['tax_expense']['deferred_tax']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['tax_expense']['deferred_tax']) }})</td>
                             </tr>
                             <tr class="fw-bold border-top">
                                 <td class="ps-4">Total Tax Expense</td>
-                                <td class="text-end text-danger">({{ format_ringgit($profitLoss['tax_expense']['total_tax']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['tax_expense']['total_tax']) }})</td>
                             </tr>
                         </tbody>
                     </table>
@@ -286,7 +286,7 @@
                         <tbody>
                             <tr class="table-{{ $profitLoss['profit_for_period']['amount'] >= 0 ? 'success' : 'danger' }} fw-bold">
                                 <td class="ps-4"><strong>PROFIT FOR THE PERIOD</strong></td>
-                                <td class="text-end fs-5">{{ format_ringgit($profitLoss['profit_for_period']['amount']) }}</td>
+                                <td class="text-end fs-5">{{ format_ringgit_report($profitLoss['profit_for_period']['amount']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-5 text-muted small">Net Profit Margin</td>
@@ -348,9 +348,9 @@
                                     <td><span class="badge bg-primary">{{ $order['order_id'] }}</span></td>
                                     <td>{{ $order['customer'] }}</td>
                                     <td>{{ \Carbon\Carbon::parse($order['date'])->format('d M Y') }}</td>
-                                    <td class="text-end">{{ format_ringgit($order['revenue']) }}</td>
-                                    <td class="text-end text-danger">{{ format_ringgit($order['cost_of_sales']) }}</td>
-                                    <td class="text-end fw-semibold text-success">{{ format_ringgit($order['gross_profit']) }}</td>
+                                    <td class="text-end">{{ format_ringgit_report($order['revenue']) }}</td>
+                                    <td class="text-end text-danger">{{ format_ringgit_report($order['cost_of_sales']) }}</td>
+                                    <td class="text-end fw-semibold text-success">{{ format_ringgit_report($order['gross_profit']) }}</td>
                                     <td class="text-center">
                                         <span class="badge bg-secondary">{{ $order['currency_info']['display_currency'] }}</span>
                                     </td>
@@ -379,12 +379,12 @@
                             </tr>
                             <tr class="table-light">
                                 <td class="ps-4"><strong>Cash Receipts from Customers</strong></td>
-                                <td class="text-end fw-bold">{{ format_ringgit($cashFlow['operating_activities']['cash_receipts']['from_customers']) }}</td>
+                                <td class="text-end fw-bold">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['from_customers']) }}</td>
                             </tr>
                             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
                             <tr>
-                                <td class="ps-5 text-muted small">via {{ ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
-                                <td class="text-end text-muted small">{{ format_ringgit($data['amount']) }}</td>
+                                <td class="ps-5 text-muted small">via {{ $method === 'stripe' ? 'Credit/Debit Card (Stripe)' : ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
+                                <td class="text-end text-muted small">{{ format_ringgit_report($data['amount']) }}</td>
                             </tr>
                             @endforeach
                             
@@ -394,22 +394,22 @@
                             </tr>
                             <tr>
                                 <td class="ps-5">To Suppliers and Service Providers</td>
-                                <td class="text-end text-danger">({{ format_ringgit($cashFlow['operating_activities']['cash_payments']['to_suppliers']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['operating_activities']['cash_payments']['to_suppliers']) }})</td>
                             </tr>
                             @foreach($cashFlow['operating_activities']['cash_payments']['supplier_breakdown'] as $type => $amount)
                             <tr>
                                 <td class="ps-6 text-muted small">{{ ucfirst(str_replace('_', ' ', $type)) }}</td>
-                                <td class="text-end text-muted small text-danger">({{ format_ringgit($amount) }})</td>
+                                <td class="text-end text-muted small text-danger">({{ format_ringgit_report($amount) }})</td>
                             </tr>
                             @endforeach
                             <tr>
                                 <td class="ps-5">Operating Expenses</td>
-                                <td class="text-end text-danger">({{ format_ringgit($cashFlow['operating_activities']['cash_payments']['operating_expenses']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['operating_activities']['cash_payments']['operating_expenses']) }})</td>
                             </tr>
                             
                             <tr class="table-success fw-bold border-top">
                                 <td class="ps-4">Net Cash from Operating Activities</td>
-                                <td class="text-end">{{ format_ringgit($cashFlow['operating_activities']['net_cash_from_operating']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($cashFlow['operating_activities']['net_cash_from_operating']) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -422,15 +422,15 @@
                             </tr>
                             <tr>
                                 <td class="ps-4">Purchase of Property, Plant & Equipment</td>
-                                <td class="text-end text-danger">({{ format_ringgit($cashFlow['investing_activities']['cash_outflows']['purchase_of_assets']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['investing_activities']['cash_outflows']['purchase_of_assets']) }})</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Proceeds from Sale of Assets</td>
-                                <td class="text-end">{{ format_ringgit($cashFlow['investing_activities']['cash_inflows']['sale_of_assets']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($cashFlow['investing_activities']['cash_inflows']['sale_of_assets']) }}</td>
                             </tr>
                             <tr class="table-info fw-bold border-top">
                                 <td class="ps-4">Net Cash from Investing Activities</td>
-                                <td class="text-end">{{ format_ringgit($cashFlow['investing_activities']['net_cash_from_investing']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($cashFlow['investing_activities']['net_cash_from_investing']) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -443,15 +443,15 @@
                             </tr>
                             <tr>
                                 <td class="ps-4">Proceeds from Borrowings</td>
-                                <td class="text-end">{{ format_ringgit($cashFlow['financing_activities']['cash_inflows']['loans_received']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($cashFlow['financing_activities']['cash_inflows']['loans_received']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Repayment of Borrowings</td>
-                                <td class="text-end text-danger">({{ format_ringgit($cashFlow['financing_activities']['cash_outflows']['loan_repayments']) }})</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['financing_activities']['cash_outflows']['loan_repayments']) }})</td>
                             </tr>
                             <tr class="table-warning fw-bold border-top">
                                 <td class="ps-4">Net Cash from Financing Activities</td>
-                                <td class="text-end">{{ format_ringgit($cashFlow['financing_activities']['net_cash_from_financing']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($cashFlow['financing_activities']['net_cash_from_financing']) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -464,15 +464,15 @@
                             </tr>
                             <tr>
                                 <td class="ps-4">Net Increase/(Decrease) in Cash</td>
-                                <td class="text-end fw-bold">{{ format_ringgit($cashFlow['cash_summary']['net_increase_in_cash']) }}</td>
+                                <td class="text-end fw-bold">{{ format_ringgit_report($cashFlow['cash_summary']['net_increase_in_cash']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Cash at Beginning of Period</td>
-                                <td class="text-end">{{ format_ringgit($cashFlow['cash_reconciliation']['opening_balance']) }}</td>
+                                <td class="text-end">{{ format_ringgit_report($cashFlow['cash_reconciliation']['opening_balance']) }}</td>
                             </tr>
                             <tr class="table-success fw-bold border-top">
                                 <td class="ps-4">Cash at End of Period</td>
-                                <td class="text-end fs-5">{{ format_ringgit($cashFlow['cash_reconciliation']['closing_balance']) }}</td>
+                                <td class="text-end fs-5">{{ format_ringgit_report($cashFlow['cash_reconciliation']['closing_balance']) }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -483,20 +483,20 @@
                         <div class="row">
                             <div class="col-md-3">
                                 <p class="mb-1 small text-muted">Operating Activities</p>
-                                <h5 class="mb-0 text-success">{{ format_ringgit($cashFlow['cash_summary']['net_cash_from_operating']) }}</h5>
+                                <h5 class="mb-0 text-success">{{ format_ringgit_report($cashFlow['cash_summary']['net_cash_from_operating']) }}</h5>
                             </div>
                             <div class="col-md-3">
                                 <p class="mb-1 small text-muted">Investing Activities</p>
-                                <h5 class="mb-0 text-info">{{ format_ringgit($cashFlow['cash_summary']['net_cash_from_investing']) }}</h5>
+                                <h5 class="mb-0 text-info">{{ format_ringgit_report($cashFlow['cash_summary']['net_cash_from_investing']) }}</h5>
                             </div>
                             <div class="col-md-3">
                                 <p class="mb-1 small text-muted">Financing Activities</p>
-                                <h5 class="mb-0 text-warning">{{ format_ringgit($cashFlow['cash_summary']['net_cash_from_financing']) }}</h5>
+                                <h5 class="mb-0 text-warning">{{ format_ringgit_report($cashFlow['cash_summary']['net_cash_from_financing']) }}</h5>
                             </div>
                             <div class="col-md-3">
                                 <p class="mb-1 small text-muted">Net Cash Movement</p>
                                 <h5 class="mb-0 text-{{ $cashFlow['cash_summary']['net_increase_in_cash'] >= 0 ? 'success' : 'danger' }}">
-                                    {{ format_ringgit($cashFlow['cash_summary']['net_increase_in_cash']) }}
+                                    {{ format_ringgit_report($cashFlow['cash_summary']['net_increase_in_cash']) }}
                                 </h5>
                             </div>
                         </div>
@@ -508,7 +508,7 @@
                             </div>
                             <div class="col-md-6">
                                 <p class="mb-1 small text-muted">Average Transaction Value</p>
-                                <h5 class="mb-0">{{ format_ringgit($cashFlow['statistics']['average_transaction_value']) }}</h5>
+                                <h5 class="mb-0">{{ format_ringgit_report($cashFlow['statistics']['average_transaction_value']) }}</h5>
                             </div>
                         </div>
                     </div>
@@ -543,7 +543,7 @@
                                     <td class="fw-semibold">{{ $boat['name'] }}</td>
                                     <td class="text-center"><span class="badge bg-success">{{ $boat['usage_count'] }}x</span></td>
                                     <td class="text-center">{{ $boat['total_participants'] }}</td>
-                                    <td class="text-end fw-bold"> {{ format_ringgit($boat['total_revenue']) }}</td>
+                                    <td class="text-end fw-bold"> {{ format_ringgit_report($boat['total_revenue']) }}</td>
                                     <td class="text-center">
                                         <a href="{{ route('financial-reports.owner', ['type' => 'boat', 'id' => $boat['id']]) }}" 
                                            class="btn btn-sm btn-outline-primary">
@@ -579,7 +579,7 @@
                                     <td class="fw-semibold">{{ $homestay['name'] }}</td>
                                     <td class="text-center"><span class="badge bg-success">{{ $homestay['usage_count'] }}x</span></td>
                                     <td class="text-center">{{ $homestay['total_units'] }}</td>
-                                    <td class="text-end fw-bold"> {{ format_ringgit($homestay['total_revenue']) }}</td>
+                                    <td class="text-end fw-bold"> {{ format_ringgit_report($homestay['total_revenue']) }}</td>
                                     <td class="text-center">
                                         <a href="{{ route('financial-reports.owner', ['type' => 'homestay', 'id' => $homestay['id']]) }}" 
                                            class="btn btn-sm btn-outline-primary">
@@ -615,7 +615,7 @@
                                     <td class="fw-semibold">{{ $culinary['name'] }}</td>
                                     <td class="text-center"><span class="badge bg-success">{{ $culinary['usage_count'] }}x</span></td>
                                     <td class="text-center">{{ $culinary['total_participants'] }}</td>
-                                    <td class="text-end fw-bold"> {{ format_ringgit($culinary['total_revenue']) }}</td>
+                                    <td class="text-end fw-bold"> {{ format_ringgit_report($culinary['total_revenue']) }}</td>
                                     <td class="text-center">
                                         <a href="{{ route('financial-reports.owner', ['type' => 'culinary', 'id' => $culinary['id']]) }}" 
                                            class="btn btn-sm btn-outline-primary">
@@ -651,7 +651,7 @@
                                     <td class="fw-semibold">{{ $kiosk['name'] }}</td>
                                     <td class="text-center"><span class="badge bg-success">{{ $kiosk['usage_count'] }}x</span></td>
                                     <td class="text-center">{{ $kiosk['total_participants'] }}</td>
-                                    <td class="text-end fw-bold"> {{ format_ringgit($kiosk['total_revenue']) }}</td>
+                                    <td class="text-end fw-bold"> {{ format_ringgit_report($kiosk['total_revenue']) }}</td>
                                     <td class="text-center">
                                         <a href="{{ route('financial-reports.owner', ['type' => 'kiosk', 'id' => $kiosk['id']]) }}" 
                                            class="btn btn-sm btn-outline-primary">
@@ -681,6 +681,8 @@
 }
 </style>
 @endsection
+
+
 
 
 

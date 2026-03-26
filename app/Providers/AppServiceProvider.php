@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Admin;
 use Illuminate\Support\ServiceProvider;
-use App\Models\Cart;
-use Illuminate\Support\Facades\View;
+use Illuminate\Auth\Notifications\ResetPassword;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,16 +19,18 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot()
-{
-    View::composer('*', function ($view) {
-        $cartCount = Cart::where(
-            'session_id',
-            session('cart_session_id')
-        )->count();
+    public function boot(): void
+    {
+        // Reset-password link is only enabled for admin accounts.
+        ResetPassword::createUrlUsing(function ($notifiable, string $token) {
+            if ($notifiable instanceof Admin) {
+                return route('admin.password.reset', [
+                    'token' => $token,
+                    'email' => $notifiable->getEmailForPasswordReset(),
+                ]);
+            }
 
-        $view->with('cartCount', $cartCount);
-    });
-}
-
+            return route('wisatawan.login');
+        });
+    }
 }

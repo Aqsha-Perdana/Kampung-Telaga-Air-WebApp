@@ -31,7 +31,11 @@ class CheckAdminRole
                 }
                 break;
 
-            
+            case 'transaction':
+                if (!$admin->canAccessTransaction()) {
+                    abort(403, 'Anda tidak memiliki akses ke Transaction');
+                }
+                break;
 
             case 'financial':
                 if (!$admin->canAccessFinancial()) {

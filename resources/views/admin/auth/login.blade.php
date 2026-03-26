@@ -85,11 +85,16 @@
                         </div>
                     </div>
 
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="remember" id="remember">
-                        <label class="form-check-label" for="remember">
-                            Remember Me
-                        </label>
+                    <div class="form-check d-flex justify-content-between align-items-center">
+                        <div>
+                            <input class="form-check-input" type="checkbox" name="remember" id="remember">
+                            <label class="form-check-label" for="remember">
+                                Remember Me
+                            </label>
+                        </div>
+                        <div>
+                            <a href="{{ route('admin.password.request') }}" class="small text-decoration-none">Forgot Password?</a>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-login">

@@ -2,13 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\OrderItemSnapshotService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class SalesController extends Controller
 {
+    public function __construct(private readonly OrderItemSnapshotService $snapshotService)
+    {
+    }
+
     public function index(Request $request)
     {
         // Get filter parameters
@@ -17,10 +24,26 @@ class SalesController extends Controller
         $status = $request->input('status', 'all');
         $displayCurrency = $request->input('display_currency', 'all'); // UPDATED: display_currency filter
 
+        $cacheKey = 'admin.sales.index.v3.' . md5(json_encode([
+            'start' => $startDate,
+            'end' => $endDate,
+            'status' => $status,
+            'display_currency' => $displayCurrency,
+        ]));
+
+        $cachedPayload = Cache::get($cacheKey);
+        if (is_array($cachedPayload)) {
+            return view('admin.sales.index', array_merge($cachedPayload, [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'status' => $status,
+                'displayCurrency' => $displayCurrency,
+            ]));
+        }
+
         // Build base query for orders with items
         $query = DB::table('orders')
             ->join('order_items', 'orders.id_order', '=', 'order_items.id_order')
-            ->join('paket_wisatas', 'order_items.id_paket', '=', 'paket_wisatas.id_paket')
             ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
 
         // Filter by status if not 'all'
@@ -41,7 +64,7 @@ class SalesController extends Controller
             }
         }
 
-        // Get all order items with details
+        // Get all order items with snapshot details
         $orderItems = $query->select(
             'orders.id_order',
             'orders.customer_name',
@@ -59,7 +82,17 @@ class SalesController extends Controller
             'order_items.durasi_hari',
             'order_items.harga_satuan',
             'order_items.jumlah_peserta',
-            'paket_wisatas.durasi_hari as paket_durasi'
+            'order_items.subtotal',
+            'order_items.boat_cost_total',
+            'order_items.homestay_cost_total',
+            'order_items.culinary_cost_total',
+            'order_items.kiosk_cost_total',
+            'order_items.vendor_cost_total',
+            'order_items.company_profit_total',
+            'order_items.boat_cost_items',
+            'order_items.homestay_cost_items',
+            'order_items.culinary_cost_items',
+            'order_items.kiosk_cost_items'
         )->orderBy('orders.created_at', 'desc')->get();
 
         // Group by orders and calculate breakdown
@@ -74,18 +107,31 @@ class SalesController extends Controller
 
             // Hitung akumulasi biaya vendor untuk semua item dalam satu order
             foreach ($items as $item) {
-                $breakdown = $this->calculateRevenueBreakdown($item->id_paket, $item->durasi_hari ?? $item->paket_durasi);
-                
-                // Penting: Kalikan biaya per pax dengan jumlah peserta
-                $totalBreakdown['boat_total'] += ($breakdown['boat_total'] ?? 0); //* $item->jumlah_peserta//;
-                $totalBreakdown['homestay_total'] += ($breakdown['homestay_total'] ?? 0); //* $item->jumlah_peserta//;
-                $totalBreakdown['culinary_total'] += ($breakdown['culinary_total'] ?? 0); //* $item->jumlah_peserta//;
-                $totalBreakdown['kiosk_total'] += ($breakdown['kiosk_total'] ?? 0); //* $item->jumlah_peserta//;
+                $breakdown = $this->snapshotService->breakdownFromOrderItem($item);
+
+                // Harga paket dan biaya vendor dihitung flat per paket.
+                $totalBreakdown['boat_total'] += ($breakdown['boat_total'] ?? 0);
+                $totalBreakdown['homestay_total'] += ($breakdown['homestay_total'] ?? 0);
+                $totalBreakdown['culinary_total'] += ($breakdown['culinary_total'] ?? 0);
+                $totalBreakdown['kiosk_total'] += ($breakdown['kiosk_total'] ?? 0);
             }
 
             // Hitung profit: Base Amount (Apa yang dibayar tamu) - Total Biaya Vendor
-            $totalVendorCosts = array_sum($totalBreakdown);
-            $companyProfit = $firstItem->base_amount - $totalVendorCosts;
+            $totalVendorCosts = (float) $items->sum(function ($item) {
+                return (float) ($item->vendor_cost_total ?? 0);
+            });
+
+            if ($totalVendorCosts <= 0.0) {
+                $totalVendorCosts = array_sum($totalBreakdown);
+            }
+
+            $companyProfit = (float) $items->sum(function ($item) {
+                return (float) ($item->company_profit_total ?? ((float) ($item->subtotal ?? 0) - (float) ($item->vendor_cost_total ?? 0)));
+            });
+
+            if ($companyProfit == 0.0 && (float) $firstItem->base_amount > 0) {
+                $companyProfit = (float) $firstItem->base_amount - $totalVendorCosts;
+            }
 
             return (object)[
                 'id_order' => $firstItem->id_order,
@@ -108,12 +154,7 @@ class SalesController extends Controller
         // Get summary statistics (only paid orders)
         $paidOrders = $groupedOrders->where('status', 'paid');
         
-        $companyRevenue = DB::table('order_items')
-            ->join('orders', 'orders.id_order', '=', 'order_items.id_order')
-            ->join('paket_wisatas', 'order_items.id_paket', '=', 'paket_wisatas.id_paket')
-            ->where('orders.status', 'paid')
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->sum(DB::raw('paket_wisatas.harga_final - paket_wisatas.harga_total'));
+        $companyRevenue = $paidOrders->sum('company_profit');
 
         // UPDATED: Display Currency breakdown calculation
         $displayCurrencyBreakdown = $this->getDisplayCurrencyBreakdown($startDate, $endDate);
@@ -131,11 +172,18 @@ class SalesController extends Controller
         ];
 
         // Get entity-wise breakdown (only paid orders)
+        $paidOrderItemsForBreakdown = DB::table('order_items')
+            ->join('orders', 'orders.id_order', '=', 'order_items.id_order')
+            ->where('orders.status', 'paid')
+            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->select('order_items.*', 'orders.customer_name', 'orders.created_at')
+            ->get();
+
         $entityBreakdown = [
-            'boats' => $this->getBoatBreakdown($startDate, $endDate),
-            'homestays' => $this->getHomestayBreakdown($startDate, $endDate),
-            'culinaries' => $this->getCulinaryBreakdown($startDate, $endDate),
-            'kiosks' => $this->getKioskBreakdown($startDate, $endDate),
+            'boats' => $this->getBoatBreakdown($paidOrderItemsForBreakdown),
+            'homestays' => $this->getHomestayBreakdown($paidOrderItemsForBreakdown),
+            'culinaries' => $this->getCulinaryBreakdown($paidOrderItemsForBreakdown),
+            'kiosks' => $this->getKioskBreakdown($paidOrderItemsForBreakdown),
         ];
 
         // Get chart data (daily sales)
@@ -153,6 +201,16 @@ class SalesController extends Controller
             ->unique()
             ->sort()
             ->values();
+
+        $viewPayload = compact(
+            'groupedOrders',
+            'summary',
+            'entityBreakdown',
+            'chartData',
+            'availableDisplayCurrencies',
+        );
+
+        Cache::put($cacheKey, $viewPayload, now()->addSeconds(30));
 
         return view('admin.sales.index', compact(
             'groupedOrders',
@@ -227,179 +285,51 @@ class SalesController extends Controller
         return $symbols[$currency] ?? $currency . ' ';
     }
 
-    private function calculateRevenueBreakdown($paketId, $durasiHari)
+    private function getBoatBreakdown($orderItems)
     {
-        $breakdown = [
-            'boat_total' => 0,
-            'boat_items' => [],
-            'homestay_total' => 0,
-            'homestay_items' => [],
-            'culinary_total' => 0,
-            'culinary_items' => [],
-            'kiosk_total' => 0,
-            'kiosk_items' => [],
-        ];
-
-        // Calculate Boat Revenue
-        $boats = DB::table('paket_wisata_boat')
-            ->join('boats', 'paket_wisata_boat.id_boat', '=', 'boats.id')
-            ->where('paket_wisata_boat.id_paket', $paketId)
-            ->select('boats.nama', 'boats.harga_sewa', 'paket_wisata_boat.hari_ke')
-            ->get();
-
-        foreach ($boats as $boat) {
-            $revenue = $boat->harga_sewa * 1;
-            $breakdown['boat_total'] += $revenue;
-            $breakdown['boat_items'][] = [
-                'nama' => $boat->nama,
-                'hari_ke' => $boat->hari_ke,
-                'harga_per_hari' => $boat->harga_sewa,
-                'revenue' => $revenue
-            ];
-        }
-
-        // Calculate Homestay Revenue
-        $homestays = DB::table('paket_wisata_homestay')
-        ->join('homestays', 'homestays.id_homestay', '=', 'paket_wisata_homestay.id_homestay')
-        ->where('paket_wisata_homestay.id_paket', $paketId)
-        ->select('homestays.nama', 'homestays.harga_per_malam', 'paket_wisata_homestay.jumlah_malam')
-        ->get();
-
-        foreach ($homestays as $homestay) {
-            $revenue = $homestay->harga_per_malam * $homestay->jumlah_malam;
-            $breakdown['homestay_total'] += $revenue;
-            $breakdown['homestay_items'][] = [
-                'nama' => $homestay->nama,
-                'jumlah_malam' => $homestay->jumlah_malam,
-                'harga_per_malam' => $homestay->harga_per_malam,
-                'revenue' => $revenue
-            ];
-        }
-
-        // Calculate Culinary Revenue
-        $culinaries = DB::table('paket_wisata_culinary')
-            ->join('paket_culinaries', 'paket_wisata_culinary.id_paket_culinary', '=', 'paket_culinaries.id')
-            ->join('culinaries', 'paket_culinaries.id_culinary', '=', 'culinaries.id_culinary')
-            ->where('paket_wisata_culinary.id_paket', $paketId)
-            ->select(
-                'culinaries.nama', 
-                'paket_culinaries.harga', 
-                'paket_culinaries.kapasitas', 
-                'paket_wisata_culinary.hari_ke'
-            )
-            ->get();
-
-        foreach ($culinaries as $culinary) {
-            $revenue = $culinary->harga;
-            $breakdown['culinary_total'] += $revenue;
-            $breakdown['culinary_items'][] = [
-                'nama' => $culinary->nama,
-                'hari_ke' => $culinary->hari_ke,
-                'kapasitas' => $culinary->kapasitas,
-                'harga' => $culinary->harga,
-                'revenue' => $revenue
-            ];
-        }
-
-        // Calculate Kiosk Revenue
-        $kiosks = DB::table('paket_wisata_kiosk')
-            ->join('kiosks', 'paket_wisata_kiosk.id_kiosk', '=', 'kiosks.id_kiosk')
-            ->where('paket_wisata_kiosk.id_paket', $paketId)
-            ->select('kiosks.nama', 'kiosks.harga_per_paket', 'paket_wisata_kiosk.hari_ke')
-            ->get();
-
-        foreach ($kiosks as $kiosk) {
-            $revenue = $kiosk->harga_per_paket;
-            $breakdown['kiosk_total'] += $revenue;
-            $breakdown['kiosk_items'][] = [
-                'nama' => $kiosk->nama,
-                'hari_ke' => $kiosk->hari_ke,
-                'harga_per_paket' => $kiosk->harga_per_paket,
-                'revenue' => $revenue
-            ];
-        }
-
-        return $breakdown;
+        return $this->snapshotService->aggregateResourceEntries($orderItems, 'boats')
+            ->map(fn (array $entry) => (object) [
+                'id' => $entry['id'],
+                'nama' => $entry['name'],
+                'harga_sewa' => $entry['price_per_unit'],
+                'total_orders' => $entry['total_orders'],
+                'total_revenue' => $entry['total_revenue'],
+            ]);
     }
 
-    private function getBoatBreakdown($startDate, $endDate)
+    private function getHomestayBreakdown($orderItems)
     {
-        return DB::table('orders')
-            ->join('order_items', 'orders.id_order', '=', 'order_items.id_order')
-            ->join('paket_wisata_boat', 'order_items.id_paket', '=', 'paket_wisata_boat.id_paket')
-            ->join('boats', 'paket_wisata_boat.id_boat', '=', 'boats.id')
-            ->where('orders.status', 'paid')
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->select(
-                'boats.id',
-                'boats.nama',
-                'boats.harga_sewa',
-                DB::raw('COUNT(DISTINCT orders.id_order) as total_orders'),
-                DB::raw('SUM(boats.harga_sewa) as total_revenue')
-            )
-            ->groupBy('boats.id', 'boats.nama', 'boats.harga_sewa')
-            ->orderBy('total_revenue', 'desc')
-            ->get();
-    }
-    
-
-    private function getHomestayBreakdown($startDate, $endDate)
-{
-    return DB::table('orders')
-        ->join('order_items', 'orders.id_order', '=', 'order_items.id_order')
-        ->join('paket_wisata_homestay', 'order_items.id_paket', '=', 'paket_wisata_homestay.id_paket')
-        ->join('homestays', 'homestays.id_homestay', '=', 'paket_wisata_homestay.id_homestay')
-        ->where('orders.status', 'paid')
-        ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-        ->select(
-            'homestays.id',
-            'homestays.nama',
-            'homestays.harga_per_malam',
-            DB::raw('COUNT(DISTINCT orders.id_order) as total_orders'),
-            DB::raw('SUM(homestays.harga_per_malam * paket_wisata_homestay.jumlah_malam) as total_revenue')
-        )
-        ->groupBy('homestays.id', 'homestays.nama', 'homestays.harga_per_malam')
-        ->orderBy('total_revenue', 'desc')
-        ->get();
-}
-    private function getCulinaryBreakdown($startDate, $endDate)
-    {
-        return DB::table('orders')
-            ->join('order_items', 'orders.id_order', '=', 'order_items.id_order')
-            ->join('paket_wisata_culinary', 'order_items.id_paket', '=', 'paket_wisata_culinary.id_paket')
-            ->join('paket_culinaries', 'paket_wisata_culinary.id_paket_culinary', '=', 'paket_culinaries.id')
-            ->join('culinaries', 'paket_culinaries.id_culinary', '=', 'culinaries.id_culinary')
-            ->where('orders.status', 'paid')
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->select(
-                'culinaries.id_culinary',
-                'culinaries.nama',
-                DB::raw('COUNT(DISTINCT orders.id_order) as total_orders'),
-                DB::raw('SUM(paket_culinaries.harga) as total_revenue')
-            )
-            ->groupBy('culinaries.id_culinary', 'culinaries.nama')
-            ->orderBy('total_revenue', 'desc')
-            ->get();
+        return $this->snapshotService->aggregateResourceEntries($orderItems, 'homestays')
+            ->map(fn (array $entry) => (object) [
+                'id' => $entry['id'],
+                'nama' => $entry['name'],
+                'harga_per_malam' => $entry['price_per_unit'],
+                'total_orders' => $entry['total_orders'],
+                'total_revenue' => $entry['total_revenue'],
+            ]);
     }
 
-    private function getKioskBreakdown($startDate, $endDate)
+    private function getCulinaryBreakdown($orderItems)
     {
-        return DB::table('orders')
-            ->join('order_items', 'orders.id_order', '=', 'order_items.id_order')
-            ->join('paket_wisata_kiosk', 'order_items.id_paket', '=', 'paket_wisata_kiosk.id_paket')
-            ->join('kiosks', 'paket_wisata_kiosk.id_kiosk', '=', 'kiosks.id_kiosk')
-            ->where('orders.status', 'paid')
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->select(
-                'kiosks.id_kiosk',
-                'kiosks.nama',
-                'kiosks.harga_per_paket',
-                DB::raw('COUNT(DISTINCT orders.id_order) as total_orders'),
-                DB::raw('SUM(kiosks.harga_per_paket) as total_revenue')
-            )
-            ->groupBy('kiosks.id_kiosk', 'kiosks.nama', 'kiosks.harga_per_paket')
-            ->orderBy('total_revenue', 'desc')
-            ->get();
+        return $this->snapshotService->aggregateResourceEntries($orderItems, 'culinary')
+            ->map(fn (array $entry) => (object) [
+                'id_culinary' => $entry['id'],
+                'nama' => $entry['name'],
+                'total_orders' => $entry['total_orders'],
+                'total_revenue' => $entry['total_revenue'],
+            ]);
+    }
+
+    private function getKioskBreakdown($orderItems)
+    {
+        return $this->snapshotService->aggregateResourceEntries($orderItems, 'kiosks')
+            ->map(fn (array $entry) => (object) [
+                'id_kiosk' => $entry['id'],
+                'nama' => $entry['name'],
+                'harga_per_paket' => $entry['price_per_unit'],
+                'total_orders' => $entry['total_orders'],
+                'total_revenue' => $entry['total_revenue'],
+            ]);
     }
 
     private function getDailySalesChart($startDate, $endDate)
@@ -436,25 +366,15 @@ class SalesController extends Controller
             abort(404, 'Order not found');
         }
 
-        // Get order items with package details
+        // Get order items with snapshot details
         $orderItems = DB::table('order_items')
-            ->join('paket_wisatas', 'order_items.id_paket', '=', 'paket_wisatas.id_paket')
             ->where('order_items.id_order', $orderId)
-            ->select(
-                'order_items.*',
-                'paket_wisatas.nama_paket',
-                'paket_wisatas.durasi_hari as paket_durasi',
-                'paket_wisatas.harga_total as paket_harga_total'
-            )
+            ->select('order_items.*')
             ->get();
 
         // Calculate detailed breakdown for each item
         $itemsWithBreakdown = $orderItems->map(function($item) {
-            $breakdown = $this->calculateRevenueBreakdown(
-                $item->id_paket, 
-                $item->durasi_hari ?? $item->paket_durasi
-            );
-            $item->breakdown = $breakdown;
+            $item->breakdown = $this->snapshotService->breakdownFromOrderItem($item);
             return $item;
         });
 
@@ -464,6 +384,25 @@ class SalesController extends Controller
             'homestay' => $itemsWithBreakdown->sum('breakdown.homestay_total'),
             'culinary' => $itemsWithBreakdown->sum('breakdown.culinary_total'),
             'kiosk' => $itemsWithBreakdown->sum('breakdown.kiosk_total'),
+        ];
+
+        $vendorTotalSnapshot = array_sum($totals);
+        $originalProfitSnapshot = (float) $orderItems->sum(function ($item) {
+            return (float) ($item->company_profit_total ?? ((float) ($item->subtotal ?? 0) - (float) ($item->vendor_cost_total ?? 0)));
+        });
+
+        if ($originalProfitSnapshot == 0.0) {
+            $originalProfitSnapshot = (float) ($order->base_amount ?? $order->total_amount ?? 0) - $vendorTotalSnapshot;
+        }
+
+        $reportedProfitImpact = $order->status === 'refunded'
+            ? (float) ($order->refund_fee ?? 0)
+            : $originalProfitSnapshot;
+
+        $financialSummary = [
+            'vendor_total' => $vendorTotalSnapshot,
+            'original_profit' => $originalProfitSnapshot,
+            'reported_profit_impact' => $reportedProfitImpact,
         ];
 
         // Get payment logs if exists
@@ -476,7 +415,8 @@ class SalesController extends Controller
             'order',
             'itemsWithBreakdown',
             'totals',
-            'paymentLogs'
+            'paymentLogs',
+            'financialSummary'
         ));
     }
 
@@ -484,16 +424,16 @@ class SalesController extends Controller
 {
     $vendorTotals = [
         'boat' => $itemsWithBreakdown->sum(function($i) { 
-            return ($i->breakdown['boat_total'] ?? 0) * $i->jumlah_peserta; 
+            return ($i->breakdown['boat_total'] ?? 0); 
         }),
         'homestay' => $itemsWithBreakdown->sum(function($i) { 
-            return ($i->breakdown['homestay_total'] ?? 0) * $i->jumlah_peserta; 
+            return ($i->breakdown['homestay_total'] ?? 0); 
         }),
         'culinary' => $itemsWithBreakdown->sum(function($i) { 
-            return ($i->breakdown['culinary_total'] ?? 0) * $i->jumlah_peserta; 
+            return ($i->breakdown['culinary_total'] ?? 0); 
         }),
         'kiosk' => $itemsWithBreakdown->sum(function($i) { 
-            return ($i->breakdown['kiosk_total'] ?? 0) * $i->jumlah_peserta; 
+            return ($i->breakdown['kiosk_total'] ?? 0); 
         }),
     ];
 
@@ -507,30 +447,77 @@ class SalesController extends Controller
 }
 
     public function downloadManifest($orderId)
-{
-    $order = DB::table('orders')->where('id_order', $orderId)->first();
-    if (!$order) { abort(404); }
+    {
+        $order = DB::table('orders')->where('id_order', $orderId)->first();
+        if (!$order) { abort(404); }
 
-    $orderItems = DB::table('order_items')
-        ->join('paket_wisatas', 'order_items.id_paket', '=', 'paket_wisatas.id_paket')
-        ->where('order_items.id_order', $orderId)
-        ->select('order_items.*', 'paket_wisatas.nama_paket', 'paket_wisatas.durasi_hari')
-        ->get();
+        $orderItems = DB::table('order_items')
+            ->where('order_items.id_order', $orderId)
+            ->select('order_items.*')
+            ->get();
 
-    $itemsWithBreakdown = $orderItems->map(function($item) {
-        $item->breakdown = $this->calculateRevenueBreakdown($item->id_paket, $item->durasi_hari);
-        return $item;
-    });
+        $itemsWithBreakdown = $orderItems->map(function($item) {
+            $item->breakdown = $this->snapshotService->breakdownFromOrderItem($item);
+            return $item;
+        });
 
-    // MEMANGGIL FUNGSI YANG BARU DIBUAT
-    $totals = $this->calculateTotals($itemsWithBreakdown, $order->base_amount);
+        // MEMANGGIL FUNGSI YANG BARU DIBUAT
+        $totals = $this->calculateTotals($itemsWithBreakdown, $order->base_amount);
 
-    $pdf = \PDF::loadView('invoice.manifest', [
-        'order' => $order,
-        'items' => $itemsWithBreakdown,
-        'totals' => $totals
-    ]);
+        $pdf = \PDF::loadView('invoice.manifest', [
+            'order' => $order,
+            'items' => $itemsWithBreakdown,
+            'totals' => $totals
+        ]);
 
-    return $pdf->download('Manifest-'.$orderId.'.pdf');
-}
+        return $pdf->download('Manifest-'.$orderId.'.pdf');
+    }
+
+    public function approveRefund(Request $request, $id_order, RefundService $refundService)
+    {
+        $result = $refundService->approveRefund((string) $id_order);
+
+        if (($result['ok'] ?? false) !== true) {
+            return redirect()->back()->with('error', $result['message']);
+        }
+
+        if (($result['code'] ?? null) === 'already_refunded') {
+            return redirect()->back()->with('success', 'This refund has already been processed.');
+        }
+
+        return redirect()->back()->with(
+            'success',
+            'Refund approved. RM '
+            . number_format((float) ($result['refund_amount'] ?? 0), 2)
+            . ' has been returned (Refund fee: RM '
+            . number_format((float) ($result['refund_fee'] ?? 0), 2)
+            . ').'
+        );
+    }
+
+    public function rejectRefund(Request $request, $id_order)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:1000'
+        ]);
+
+        $order = \App\Models\Order::findOrFail($id_order);
+
+        if ($order->status !== 'refund_requested') {
+            return redirect()->back()->with('error', 'This order is not in refund-requested status.');
+        }
+
+        if ($order->refund_status === 'processing') {
+            return redirect()->back()->with('error', 'Refund is currently processing and cannot be rejected right now.');
+        }
+
+        $order->update([
+            'status' => 'paid',
+            'refund_status' => 'rejected',
+            'refund_rejected_reason' => $request->reason,
+            'refund_failure_reason' => null,
+        ]);
+
+        return redirect()->back()->with('success', 'Refund request rejected. Order status has been restored to Paid.');
+    }
 }

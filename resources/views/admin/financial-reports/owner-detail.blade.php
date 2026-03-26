@@ -53,7 +53,7 @@
                         <div class="col-md-3">
                             <p class="mb-2"><strong>Price per {{ $report['unit_name'] }}:</strong></p>
                             <p class="fs-5 text-success fw-bold">
-                                {{ format_ringgit($report['price_per_unit']) }}
+                                {{ format_ringgit_report($report['price_per_unit']) }}
                             </p>
                         </div>
                     </div>
@@ -99,8 +99,8 @@
         <div class="col-md-3">
             <div class="card bg-warning text-white">
                 <div class="card-body">
-                    <h6 class="text-white mb-2">Total Revenue</h6>
-                    <h3 class="mb-0 fw-bold text-white">{{ format_ringgit($report['total_revenue']) }}</h3>
+                    <h6 class="text-white mb-2">Owner Revenue</h6>
+                    <h3 class="mb-0 fw-bold text-white">{{ format_ringgit_report($report['total_revenue']) }}</h3>
                     <small>Earnings</small>
                 </div>
             </div>
@@ -127,7 +127,7 @@
                             @if(isset($report['total_units']))
                             <th class="text-center">{{ ucfirst($report['unit_name']) }}s</th>
                             @endif
-                            <th class="text-end">Revenue</th>
+                            <th class="text-end">Owner Revenue</th>
                             <th>Order Date</th>
                         </tr>
                     </thead>
@@ -138,7 +138,12 @@
                                 <span class="badge bg-primary">{{ $transaction->id_order }}</span>
                             </td>
                             <td class="fw-semibold">{{ $transaction->customer_name }}</td>
-                            <td>{{ $transaction->nama_paket }}</td>
+                            <td>
+                                {{ $transaction->nama_paket }}
+                                @if(isset($transaction->variant_name))
+                                    <div class="small text-muted fst-italic">{{ $transaction->variant_name }}</div>
+                                @endif
+                            </td>
                             <td>{{ Carbon\Carbon::parse($transaction->tanggal_keberangkatan)->format('d M Y') }}</td>
                             <td class="text-center">
                                 <span class="badge bg-success">{{ $transaction->jumlah_peserta }} pax</span>
@@ -149,10 +154,12 @@
                             </td>
                             @endif
                             <td class="text-end fw-bold text-success">
-                                @if(isset($transaction->jumlah_malam))
-                                    {{ format_ringgit($transaction->jumlah_malam * $report['price_per_unit']) }}
+                                @if(isset($transaction->variant_price))
+                                    {{ format_ringgit_report($transaction->variant_price) }}
+                                @elseif(isset($transaction->jumlah_malam))
+                                    {{ format_ringgit_report($transaction->jumlah_malam * $report['price_per_unit']) }}
                                 @else
-                                    {{ format_ringgit($report['price_per_unit']) }}
+                                    {{ format_ringgit_report($report['price_per_unit']) }}
                                 @endif
                             </td>
                             <td>{{ Carbon\Carbon::parse($transaction->created_at)->format('d M Y') }}</td>
@@ -161,9 +168,9 @@
                     </tbody>
                     <tfoot class="table-light">
                         <tr>
-                            <th colspan="{{ isset($report['total_units']) ? '6' : '5' }}" class="text-end">TOTAL REVENUE:</th>
+                            <th colspan="{{ isset($report['total_units']) ? '6' : '5' }}" class="text-end">TOTAL OWNER REVENUE:</th>
                             <th class="text-end text-success fs-5">
-                                {{ format_ringgit($report['total_revenue']) }}
+                                {{ format_ringgit_report($report['total_revenue']) }}
                             </th>
                             <th></th>
                         </tr>
@@ -199,9 +206,9 @@
                         </div>
                         <div class="col-md-4">
                             <div class="border rounded p-3">
-                                <p class="text-muted mb-1">Average Revenue per Booking</p>
+                                <p class="text-muted mb-1">Average Owner Revenue per Booking</p>
                                 <h4 class="fw-bold mb-0 text-success">
-                                    {{ format_ringgit($report['total_revenue'] / $report['usage_count']) }}
+                                    {{ format_ringgit_report($report['total_revenue'] / $report['usage_count']) }}
                                 </h4>
                             </div>
                         </div>

@@ -1,0 +1,48 @@
+.table-modern {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.table-modern thead th {
+    background-color: transparent;
+    color: var(--color-slate-500);
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: none;
+    padding: 1rem;
+}
+
+.table-modern tbody tr {
+    background-color: var(--color-white);
+    box-shadow: var(--shadow-table-row);
+    transition: transform 0.2s ease;
+}
+
+.table-modern tbody tr:hover {
+    transform: scale(1.005);
+    background-color: var(--color-white);
+    box-shadow: var(--shadow-table-row-hover);
+}
+
+.table-modern tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-top: 1px solid rgba(241, 245, 249, 0.5);
+    border-bottom: 1px solid rgba(241, 245, 249, 0.5);
+    color: var(--color-slate-700);
+    background-color: var(--color-white);
+}
+
+.table-modern tbody td:first-child {
+    border-top-left-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+    border-left: 1px solid rgba(241, 245, 249, 0.5);
+}
+
+.table-modern tbody td:last-child {
+    border-top-right-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    border-right: 1px solid rgba(241, 245, 249, 0.5);
+}

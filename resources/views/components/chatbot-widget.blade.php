@@ -5,7 +5,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
         </svg>
-        <span class="chatbot-badge" id="chatbot-badge">?</span>
+        <span class="chatbot-badge" id="chatbot-badge" style="display: none;">AI</span>
     </button>
 
     <!-- Chat Window -->
@@ -18,7 +18,7 @@
         <div class="chatbot-messages" id="chatbot-messages">
             <div class="chatbot-message bot-message">
                 <div class="message-content">
-                    Halo Telaga People !🌊💧 Is there anything I can help you with?
+                    Hello, welcome to Telaga Air. How can I help you today?
                 </div>
             </div>
         </div>
@@ -29,7 +29,7 @@
                 type="text" 
                 id="chatbot-input" 
                 class="chatbot-input" 
-                placeholder="Write Your Message..."
+                placeholder="Type your message..."
                 autocomplete="off"
                 required
             >
@@ -46,47 +46,47 @@
 <style>
 #chatbot-widget {
     position: fixed;
-    bottom: 110px; /* Di atas tombol WhatsApp (60px height + 30px margin + 20px gap) */
-    right: 30px;
-    z-index: 9999;
+    bottom: 104px;
+    right: 24px;
+    z-index: 1042;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 .chatbot-toggle {
-    width: 60px;
-    height: 60px;
+    width: 58px;
+    height: 58px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #96defb 20%, #2a93cc);
-    border: none;
+    background: linear-gradient(140deg, #7dd3fc 8%, #2563eb 92%);
+    border: 2px solid rgba(255, 255, 255, 0.75);
     color: white;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.33);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    transition: all 0.3s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .chatbot-toggle:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.38);
 }
 
 .chatbot-badge {
     position: absolute;
-    top: -5px;
-    right: -5px;
+    top: -6px;
+    right: -6px;
     background: #ff4757;
     color: white;
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
+    width: 19px;
+    height: 19px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 10px;
+    font-weight: 700;
 }
 
 .chatbot-window {
@@ -272,17 +272,44 @@
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 767.98px) {
     #chatbot-widget {
-        bottom: 110px; /* Tetap di atas WhatsApp di mobile */
-        right: 10px;
+        bottom: calc(114px + env(safe-area-inset-bottom));
+        right: 12px;
+    }
+
+    .chatbot-toggle {
+        width: 56px;
+        height: 56px;
     }
     
     .chatbot-window {
-        width: calc(100vw - 40px);
-        right: -10px;
-        height: 450px;
-        max-height: calc(100vh - 200px);
+        width: min(92vw, 360px);
+        right: 0;
+        height: min(68vh, 520px);
+        max-height: calc(100vh - 160px);
+        border-radius: 18px;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.25);
+    }
+
+    .chatbot-header {
+        padding: 14px 16px;
+    }
+
+    .chatbot-header h3 {
+        font-size: 16px;
+    }
+
+    .chatbot-messages {
+        padding: 14px;
+    }
+
+    .message-content {
+        max-width: 86%;
+    }
+
+    .chatbot-input-form {
+        padding: 12px;
     }
 }
 </style>
@@ -290,7 +317,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const toggle = document.getElementById('chatbot-toggle');
-    const window = document.getElementById('chatbot-window');
+    const chatWindow = document.getElementById('chatbot-window');
     const close = document.getElementById('chatbot-close');
     const form = document.getElementById('chatbot-form');
     const input = document.getElementById('chatbot-input');
@@ -303,13 +330,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle chat window
     toggle.addEventListener('click', function() {
         isOpen = !isOpen;
-        window.style.display = isOpen ? 'flex' : 'none';
+        chatWindow.style.display = isOpen ? 'flex' : 'none';
         badge.style.display = 'none';
     });
 
     close.addEventListener('click', function() {
         isOpen = false;
-        window.style.display = 'none';
+        chatWindow.style.display = 'none';
     });
 
     // Handle form submit
@@ -323,11 +350,19 @@ document.addEventListener('DOMContentLoaded', function() {
         addMessage(message, 'user');
         input.value = '';
         
+        const localReply = getLocalQuickReply(message);
+        if (localReply) {
+            addMessage(localReply, 'bot');
+            input.focus();
+            return;
+        }
+
         // Show typing indicator
         const typingId = showTypingIndicator();
-        
-        // Disable send button
         sendBtn.disabled = true;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         // Send to server
         fetch('{{ route("chatbot.send") }}', {
@@ -337,9 +372,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || 
                                 document.querySelector('input[name="_token"]').value
             },
-            body: JSON.stringify({ message: message })
+            signal: controller.signal,
+            body: JSON.stringify({
+                message: message,
+                current_path: window.location.pathname + window.location.search
+            })
         })
-        .then(response => response.json())
+        .then(async response => {
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data) {
+                throw new Error('Invalid response');
+            }
+            return data;
+        })
         .then(data => {
             // Remove typing indicator
             removeTypingIndicator(typingId);
@@ -347,19 +392,71 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 addMessage(data.message, 'bot');
             } else {
-                addMessage('Maaf, terjadi kesalahan. Silakan coba lagi.', 'bot');
+                addMessage('Sorry, something went wrong. Please try again.', 'bot');
             }
         })
         .catch(error => {
             removeTypingIndicator(typingId);
-            addMessage('Maaf, koneksi bermasalah. Silakan coba lagi.', 'bot');
+            if (error.name === 'AbortError') {
+                addMessage('The server took too long to respond. Please send your question again.', 'bot');
+            } else {
+                addMessage('Sorry, there is a connection problem. Please try again.', 'bot');
+            }
             console.error('Error:', error);
         })
         .finally(() => {
+            clearTimeout(timeoutId);
             sendBtn.disabled = false;
             input.focus();
         });
     });
+
+    function getLocalQuickReply(text) {
+        const cleaned = text
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!cleaned) return null;
+
+        const greetings = ['halo', 'hai', 'hi', 'hello', 'morning', 'afternoon', 'evening'];
+        if (greetings.includes(cleaned)) {
+            return 'Hello, I can help with tour packages, destinations, homestays, culinary spots, the kiosk, checkout, and your orders.';
+        }
+
+        const thanks = ['terima kasih', 'makasih', 'thanks', 'thx', 'thank you'];
+        if (thanks.includes(cleaned)) {
+            return 'You are welcome. If you want, I can also help you choose the most suitable package.';
+        }
+
+        if (
+            cleaned.includes('checkout') ||
+            cleaned.includes('cara bayar') ||
+            cleaned.includes('pembayaran') ||
+            cleaned.includes('how to pay') ||
+            cleaned.includes('payment')
+        ) {
+            return [
+                'How to check out:',
+                '1. Log in to your traveler account.',
+                '2. Add a package to your cart at /cart.',
+                '3. Open /checkout and complete the customer details.',
+                '4. Continue with card payment through Stripe.',
+                '5. Check your order status at /orders.'
+            ].join('\n');
+        }
+
+        if (cleaned.includes('refund')) {
+            return 'Refund requests can be submitted from the order detail page and only apply to orders with paid status.';
+        }
+
+        if (cleaned.includes('riwayat') || cleaned.includes('order history') || cleaned.includes('pesanan saya')) {
+            return 'Your order history is available at /orders after you log in.';
+        }
+
+        return null;
+    }
 
     function addMessage(text, type) {
         const messageDiv = document.createElement('div');
@@ -399,3 +496,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+

@@ -58,7 +58,8 @@
                         <img src="{{ asset('storage/' . $homestay->foto) }}" 
                              class="w-100 h-100" 
                              style="object-fit: cover;"
-                             alt="{{ $homestay->nama }}">
+                             alt="{{ $homestay->nama }}"
+                             loading="lazy">
                     </div>
                 </div>
             </div>
@@ -278,7 +279,7 @@
                             <div class="d-flex align-items-center mb-3">
                                 <i class="bi bi-people text-primary fs-5 me-3"></i>
                                 <div>
-                                    <small class="text-muted d-block">Max Capacitu</small>
+                                    <small class="text-muted d-block">Max Capacity</small>
                                     <strong>{{ $homestay->kapasitas }} People</strong>
                                 </div>
                             </div>
@@ -305,17 +306,17 @@
                         <!-- Contact Buttons -->
                         <div class="d-grid gap-2">
                             <button onclick="bookNow()" class="btn btn-success btn-lg">
-                                <i class="bi bi-whatsapp"></i> Booking via WhatsApp
+                                <i class="bi bi-whatsapp"></i> Book via WhatsApp
                             </button>
 
                             <a href="tel:081234567890" class="btn btn-outline-primary">
-                                <i class="bi bi-telephone"></i> Telepon Langsung
+                                <i class="bi bi-telephone"></i> Call Directly
                             </a>
                         </div>
 
                         <!-- Share -->
                         <div class="mt-4 text-center">
-                            <small class="text-muted d-block mb-2">Bagikan:</small>
+                            <small class="text-muted d-block mb-2">Share:</small>
                             <div class="d-flex justify-content-center gap-2">
                                 <a href="https://www.facebook.com/sharer/sharer.php?u={{ url()->current() }}" 
                                    target="_blank" 
@@ -344,7 +345,7 @@
 @if($relatedHomestays->count() > 0)
 <section class="related-section py-5 bg-light">
     <div class="container">
-        <h3 class="fw-bold mb-4">Homestay Lainnya</h3>
+        <h3 class="fw-bold mb-4">More Homestays</h3>
         <div class="row g-4">
             @foreach($relatedHomestays as $related)
             <div class="col-md-4">
@@ -354,7 +355,8 @@
                             <img src="{{ asset('storage/' . $related->foto) }}" 
                                  class="card-img-top h-100 w-100" 
                                  style="object-fit: cover;" 
-                                 alt="{{ $related->nama }}">
+                                 alt="{{ $related->nama }}"
+                                 loading="lazy">
                         @else
                             <div class="h-100 w-100 d-flex align-items-center justify-content-center bg-light">
                                 <i class="bi bi-house-door text-muted" style="font-size: 3rem;"></i>
@@ -362,19 +364,19 @@
                         @endif
 
                         <span class="position-absolute top-0 start-0 m-2 badge bg-primary">
-                            <i class="bi bi-people"></i> {{ $related->kapasitas }} Orang
+                            <i class="bi bi-people"></i> {{ $related->kapasitas }} People
                         </span>
                     </div>
                     <div class="card-body">
                         <h5 class="card-title fw-bold">{{ $related->nama }}</h5>
-                        <p class="text-muted small mb-3">Kapasitas hingga {{ $related->kapasitas }} orang dengan fasilitas lengkap</p>
+                        <p class="text-muted small mb-3">Capacity for up to {{ $related->kapasitas }} guests with complete facilities</p>
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <small class="text-muted d-block">Harga/Malam</small>
+                                <small class="text-muted d-block">Price / Night</small>
                                 <strong class="text-primary">{{  format_ringgit($related->harga_per_malam) }}</strong>
                             </div>
                             <a href="{{ route('landing.homestay.show', $related->id_homestay) }}" class="btn btn-sm btn-primary">
-                                Lihat
+                                View
                             </a>
                         </div>
                     </div>
@@ -393,18 +395,18 @@ function bookNow() {
     const guests = document.getElementById('guests').value;
     
     if (!checkin || !checkout) {
-        alert('Mohon pilih tanggal check-in dan check-out terlebih dahulu');
+        alert('Please select the check-in and check-out dates first.');
         return;
     }
     
-    const message = `Halo, saya ingin booking *{{ $homestay->nama }}*
-    
-📅 Check-in: ${checkin}
-📅 Check-out: ${checkout}
-👥 Jumlah tamu: ${guests} orang
-💰 Harga:  {{  format_ringgit($homestay->harga_per_malam) }}/night
+    const message = `Hello, I would like to book *{{ $homestay->nama }}*
 
-Mohon informasi ketersediaan dan konfirmasinya. Terima kasih!`;
+Check-in: ${checkin}
+Check-out: ${checkout}
+Number of guests: ${guests}
+Price: {{  format_ringgit($homestay->harga_per_malam) }}/night
+
+Please let me know the availability and confirmation. Thank you.`;
     
     const whatsappUrl = `https://wa.me/6281234567890?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -413,7 +415,7 @@ Mohon informasi ketersediaan dan konfirmasinya. Terima kasih!`;
 function copyLink() {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {
-        alert('Link berhasil disalin!');
+        alert('Link copied successfully!');
     });
 }
 
@@ -451,3 +453,4 @@ document.getElementById('checkin').addEventListener('change', function() {
 }
 </style>
 @endsection
+

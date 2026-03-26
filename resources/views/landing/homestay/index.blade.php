@@ -24,7 +24,7 @@
 
             <!-- Slide 2 -->
             <div class="carousel-item">
-                <div class="hero-image" style="background-image: url('{{ asset('assets/images/backgrounds/bg-lp1.jpg') }}');"></div>
+                <div class="hero-image hero-lazy" data-bg="{{ asset('assets/images/backgrounds/bg-lp1.jpg') }}"></div>
                 <div class="carousel-overlay"></div>
                 <div class="carousel-caption-custom">
                     <div class="container" data-aos="fade-up">
@@ -38,7 +38,7 @@
 
             <!-- Slide 3 -->
             <div class="carousel-item">
-                <div class="hero-image" style="background-image: url('{{ asset('assets/images/backgrounds/bg-lp2.jpg') }}');"></div>
+                <div class="hero-image hero-lazy" data-bg="{{ asset('assets/images/backgrounds/bg-lp2.jpg') }}"></div>
                 <div class="carousel-overlay"></div>
                 <div class="carousel-caption-custom">
                     <div class="container" data-aos="fade-up">
@@ -52,7 +52,7 @@
 
             <!-- Slide 4 -->
             <div class="carousel-item">
-                <div class="hero-image" style="background-image: url('{{ asset('assets/images/backgrounds/bg-lp3.jpg') }}');"></div>
+                <div class="hero-image hero-lazy" data-bg="{{ asset('assets/images/backgrounds/bg-lp3.jpg') }}"></div>
                 <div class="carousel-overlay"></div>
                 <div class="carousel-caption-custom">
                     <div class="container" data-aos="fade-up">
@@ -65,7 +65,7 @@
             </div>
 
             <div class="carousel-item">
-                <div class="hero-image" style="background-image: url('{{ asset('assets/images/backgrounds/bg-lp4.jpg') }}');"></div>
+                <div class="hero-image hero-lazy" data-bg="{{ asset('assets/images/backgrounds/bg-lp4.jpg') }}"></div>
                 <div class="carousel-overlay"></div>
                 <div class="carousel-caption-custom">
                     <div class="container" data-aos="fade-up">
@@ -155,6 +155,7 @@
                                      class="card-img-top h-100 w-100" 
                                      style="object-fit: cover;" 
                                      alt="{{ $homestay->nama }}"
+                                     loading="lazy"
                                      onerror="this.onerror=null; this.src='{{ asset('assets/images/default-homestay.jpg') }}';">
                             @else
                                 <div class="h-100 w-100 d-flex align-items-center justify-content-center" 
