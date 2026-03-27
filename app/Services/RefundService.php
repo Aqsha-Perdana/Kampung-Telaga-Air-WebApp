@@ -9,7 +9,8 @@ use Illuminate\Support\Str;
 class RefundService
 {
     public function __construct(
-        private readonly AdminNotificationService $adminNotificationService
+        private readonly AdminNotificationService $adminNotificationService,
+        private readonly CustomerEmailService $customerEmailService
     ) {
     }
 
@@ -128,6 +129,7 @@ class RefundService
             $order = Order::with('items')->where('id_order', $orderId)->first();
             if ($order) {
                 $this->adminNotificationService->notifyRefundProcessed($order);
+                $this->customerEmailService->sendRefundApproved($order);
             }
 
             return [

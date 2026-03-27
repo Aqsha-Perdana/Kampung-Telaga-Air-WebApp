@@ -15,7 +15,8 @@ class StripeOrderService
 {
     public function __construct(
         private readonly StripePaymentHelper $stripePaymentHelper,
-        private readonly AdminNotificationService $adminNotificationService
+        private readonly AdminNotificationService $adminNotificationService,
+        private readonly CustomerEmailService $customerEmailService
     ) {
     }
 
@@ -121,6 +122,7 @@ class StripeOrderService
         $order = Order::with('items')->where('id_order', $orderId)->first();
         if ($order && $order->status === 'paid') {
             $this->adminNotificationService->notifyPaymentPaid($order);
+            $this->customerEmailService->sendOrderPaid($order);
         }
     }
 

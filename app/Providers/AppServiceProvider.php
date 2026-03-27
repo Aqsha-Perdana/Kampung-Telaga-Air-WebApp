@@ -30,7 +30,10 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
 
-            return route('wisatawan.login');
+            return route('wisatawan.password.reset', [
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ]);
         });
     }
 }

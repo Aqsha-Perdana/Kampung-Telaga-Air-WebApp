@@ -19,8 +19,8 @@ class AdminNotificationService
             $this->buildOrderPayload(
                 $order,
                 'new_order',
-                'Pemesanan baru masuk',
-                'Customer baru saja membuat pemesanan.'
+                'New booking received',
+                'A customer has placed a new booking.'
             ),
             $context
         );
@@ -32,8 +32,8 @@ class AdminNotificationService
             $this->buildOrderPayload(
                 $order,
                 'payment_paid',
-                'Pemesanan telah dibayarkan',
-                'Pembayaran pesanan berhasil dikonfirmasi.'
+                'Payment confirmed',
+                'The booking payment has been completed successfully.'
             ),
             $context
         );
@@ -44,8 +44,8 @@ class AdminNotificationService
         $payload = $this->buildOrderPayload(
             $order,
             'refund_requested',
-            'Pengajuan refund baru',
-            'Customer mengajukan refund untuk pesanan.'
+            'Refund request received',
+            'A customer has requested a refund for this booking.'
         );
 
         $payload['refund_reason'] = (string) ($order->refund_reason ?? '');
@@ -58,8 +58,8 @@ class AdminNotificationService
         $payload = $this->buildOrderPayload(
             $order,
             'refund_processed',
-            'Refund telah diproses',
-            'Refund customer berhasil diproses.'
+            'Refund processed',
+            'The customer refund has been processed successfully.'
         );
 
         $payload['refund_amount'] = (float) ($order->refund_amount ?? 0);
@@ -75,8 +75,8 @@ class AdminNotificationService
         $payload = [
             'id' => (string) Str::uuid(),
             'type' => 'cart_added',
-            'title' => 'Paket ditambahkan ke keranjang',
-            'message' => 'Customer menambahkan paket ke keranjang.',
+            'title' => 'Package added to cart',
+            'message' => 'A customer added a package to their cart.',
             'order_id' => null,
             'customer_name' => (string) ($cart->user->name ?? 'Guest'),
             'customer_email' => (string) ($cart->user->email ?? ''),
@@ -160,7 +160,7 @@ class AdminNotificationService
         return AdminNotification::create([
             'event_uuid' => (string) ($payload['id'] ?? Str::uuid()),
             'type' => (string) ($payload['type'] ?? 'general'),
-            'title' => (string) ($payload['title'] ?? 'Notifikasi'),
+            'title' => (string) ($payload['title'] ?? 'Notification'),
             'message' => (string) ($payload['message'] ?? ''),
             'order_id' => isset($payload['order_id']) ? (string) $payload['order_id'] : null,
             'customer_name' => (string) ($payload['customer_name'] ?? ''),
@@ -181,7 +181,7 @@ class AdminNotificationService
     {
         $clean = trim((string) $origin);
         if ($clean === '') {
-            return 'Tidak diketahui';
+            return 'Unknown';
         }
 
         return Str::limit($clean, 120);

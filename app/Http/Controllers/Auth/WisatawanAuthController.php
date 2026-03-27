@@ -2,29 +2,36 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\VisitorVerificationCodeService;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
-use App\Http\Controllers\CartController;
+use Illuminate\Support\Str;
 
 class WisatawanAuthController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('guest')->except('logout');
+        $this->middleware('guest')->except([
+            'logout',
+            'showVerificationNotice',
+            'verifyAccount',
+            'resendVerificationCode',
+        ]);
     }
 
-    // Show Login Form
     public function showLoginForm()
     {
         return view('auth.login-wisatawan');
     }
 
-    // Login Process
-    public function login(Request $request)
+    public function login(Request $request, VisitorVerificationCodeService $verificationService)
     {
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email'],
@@ -45,23 +52,26 @@ class WisatawanAuthController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->has('remember');
 
-        // Attempt to login
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-
-            // ===== MERGE GUEST CART TO USER CART =====
             CartController::mergeGuestCartToUser(Auth::id());
-            // =========================================
 
-            // Get user name
-            $userName = Auth::user()->name;
+            $user = Auth::user();
 
-            // Redirect to intended page or home
+            if (!$user->hasVerifiedEmail()) {
+                $result = $verificationService->sendCode($user, true);
+
+                return redirect()
+                    ->route('wisatawan.verification.notice')
+                    ->with($result['ok'] ? 'success' : 'warning', $result['ok']
+                        ? 'We sent a verification code to your email. Please verify your account to continue.'
+                        : ($result['message'] ?? 'Please verify your account to continue.'));
+            }
+
             return redirect()->intended('/')
-                ->with('success', "Welcome, {$userName}!");
+                ->with('success', 'Welcome, ' . $user->name . '!');
         }
 
-        // Login failed
         return redirect()->back()
             ->withErrors([
                 'email' => 'Invalid email or password.',
@@ -69,13 +79,73 @@ class WisatawanAuthController extends Controller
             ->withInput($request->only('email'));
     }
 
-    // Show Register Form
     public function showRegisterForm()
     {
         return view('auth.register-wisatawan');
     }
 
-    // Register Process
+    public function showForgotPasswordForm()
+    {
+        return view('auth.forgot-password-wisatawan');
+    }
+
+    public function sendResetLinkEmail(Request $request)
+    {
+        $request->validate([
+            'email' => ['required', 'email'],
+        ], [
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+        ]);
+
+        $status = Password::broker('users')->sendResetLink(
+            $request->only('email')
+        );
+
+        return $status === Password::RESET_LINK_SENT
+            ? back()->with('success', 'A password reset link has been sent to your email.')
+            : back()->withErrors(['email' => 'We could not find an account with that email address.']);
+    }
+
+    public function showResetForm(Request $request, $token)
+    {
+        return view('auth.reset-password-wisatawan', [
+            'token' => $token,
+            'email' => $request->query('email'),
+        ]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => ['required'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'email.required' => 'Email is required.',
+            'email.email' => 'Invalid email format.',
+            'password.required' => 'Password is required.',
+            'password.min' => 'Password must be at least 8 characters.',
+            'password.confirmed' => 'Password confirmation does not match.',
+        ]);
+
+        $status = Password::broker('users')->reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                    'remember_token' => Str::random(60),
+                ])->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET
+            ? redirect()->route('wisatawan.login')->with('success', 'Your password has been reset successfully. Please log in.')
+            : back()->withErrors(['email' => [__($status)]]);
+    }
+
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -101,21 +171,81 @@ class WisatawanAuthController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'nationality' => $request->nationality,
-                'address' => $request->address,
-                'password' => Hash::make($request->password),
-            ]);
+        User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'nationality' => $request->nationality,
+            'address' => $request->address,
+            'status' => 'Pending Verification',
+            'password' => Hash::make($request->password),
+        ]);
 
-        // Auth::login($user);
-
-        return redirect()->route('wisatawan.login')->with('success', 'Registration successful! Your account has been created. Please login to explore Kampung Telaga Air.');
+        return redirect()->route('wisatawan.login')->with('success', 'Registration successful. Please log in first, then verify your email with the code sent to your inbox.');
     }
 
-    // Logout Process
+    public function showVerificationNotice(Request $request, VisitorVerificationCodeService $verificationService)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return redirect()->route('wisatawan.login');
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->route('home');
+        }
+
+        return view('auth.verify-wisatawan', [
+            'maskedEmail' => $verificationService->maskEmail((string) $user->email),
+            'cooldownRemaining' => $verificationService->getCooldownRemaining($user),
+            'expiresAt' => optional($user->email_verification_code_expires_at)?->toIso8601String(),
+        ]);
+    }
+
+    public function verifyAccount(Request $request, VisitorVerificationCodeService $verificationService)
+    {
+        $request->validate([
+            'code' => ['required', 'digits:6'],
+        ], [
+            'code.required' => 'Verification code is required.',
+            'code.digits' => 'Verification code must be 6 digits.',
+        ]);
+
+        $user = $request->user();
+
+        if (!$user) {
+            return redirect()->route('wisatawan.login');
+        }
+
+        $result = $verificationService->verify($user, (string) $request->input('code'));
+
+        if (($result['ok'] ?? false) !== true) {
+            return back()->withErrors(['code' => $result['message'] ?? 'Verification failed.']);
+        }
+
+        return redirect()->intended('/')->with('success', 'Your account has been verified successfully.');
+    }
+
+    public function resendVerificationCode(Request $request, VisitorVerificationCodeService $verificationService)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return redirect()->route('wisatawan.login');
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->route('home');
+        }
+
+        $result = $verificationService->sendCode($user);
+
+        return back()->with(($result['ok'] ?? false) ? 'success' : 'warning', $result['ok']
+            ? 'A new verification code has been sent to your email.'
+            : ($result['message'] ?? 'We could not send a new verification code right now.'));
+    }
+
     public function logout(Request $request)
     {
         Auth::logout();

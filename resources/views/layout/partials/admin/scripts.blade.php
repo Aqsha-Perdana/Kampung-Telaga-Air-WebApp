@@ -91,8 +91,9 @@
     const notifPing = document.getElementById('adminNotifPing');
     const notifToggle = document.getElementById('adminNotifToggle');
     const markReadButton = document.getElementById('adminNotifMarkRead');
+    const footerText = document.getElementById('adminNotifFooterText');
 
-    if (!notifList || !notifCount || !notifPing || !notifToggle || !markReadButton) {
+    if (!notifList || !notifCount || !notifPing || !notifToggle || !markReadButton || !footerText) {
       return;
     }
 
@@ -101,6 +102,14 @@
       items: [],
       maxItems: 10,
       markReadPending: false,
+    };
+
+    const typeMeta = {
+      new_order: { label: 'New Booking', icon: 'shopping-cart', className: 'bg-primary' },
+      payment_paid: { label: 'Payment Confirmed', icon: 'credit-card', className: 'bg-success' },
+      refund_requested: { label: 'Refund Requested', icon: 'arrow-back-up', className: 'bg-warning text-dark' },
+      refund_processed: { label: 'Refund Processed', icon: 'cash-banknote', className: 'bg-dark' },
+      cart_added: { label: 'Cart Activity', icon: 'shopping-cart-plus', className: 'bg-info text-dark' },
     };
 
     const escapeHtml = function (value) {
@@ -144,63 +153,165 @@
       });
     };
 
+    const formatRelativeTime = function (value) {
+      if (!value) {
+        return 'Unknown time';
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return 'Unknown time';
+      }
+
+      const diffMs = date.getTime() - Date.now();
+      const diffSeconds = Math.round(diffMs / 1000);
+      const absSeconds = Math.abs(diffSeconds);
+
+      if (absSeconds < 60) {
+        return diffSeconds >= 0 ? 'In a few seconds' : 'Just now';
+      }
+
+      const thresholds = [
+        { unit: 'minute', seconds: 60 },
+        { unit: 'hour', seconds: 3600 },
+        { unit: 'day', seconds: 86400 },
+      ];
+
+      for (const threshold of thresholds) {
+        const valueInUnit = diffSeconds / threshold.seconds;
+        if (Math.abs(valueInUnit) < (threshold.unit === 'minute' ? 60 : 24)) {
+          return new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+            .format(Math.round(valueInUnit), threshold.unit);
+        }
+      }
+
+      return formatDate(value);
+    };
+
+    const badgeClass = function (className) {
+      return String(className || '')
+        .split(' ')
+        .filter(Boolean)
+        .map(function (token) {
+          return token.startsWith('bg-') ? token : '';
+        })
+        .filter(Boolean)
+        .join(' ') || 'bg-secondary';
+    };
+
+    const normalizePayload = function (payload, asUnread) {
+      return Object.assign({
+        notification_id: null,
+        type: 'new_order',
+        title: 'Notification',
+        message: '',
+        package_names: [],
+        total_amount: 0,
+        currency: 'MYR',
+        total_people: 0,
+        origin: '',
+        source_ip: '',
+        created_at: null,
+        action_url: config.notificationsUrl || '#',
+        order_detail_url: null,
+        is_read: !asUnread,
+        read_at: null,
+      }, payload || {}, {
+        is_read: typeof (payload || {}).is_read === 'boolean' ? payload.is_read : !asUnread,
+      });
+    };
+
     const updateUnreadBadge = function () {
       if (state.unread > 0) {
         notifCount.textContent = state.unread > 99 ? '99+' : String(state.unread);
         notifCount.style.display = 'inline-flex';
         notifPing.classList.add('is-visible');
-        return;
+      } else {
+        notifCount.style.display = 'none';
+        notifCount.textContent = '0';
+        notifPing.classList.remove('is-visible');
       }
 
-      notifCount.style.display = 'none';
-      notifCount.textContent = '0';
-      notifPing.classList.remove('is-visible');
+      footerText.textContent = state.unread > 0
+        ? state.unread + ' unread · latest ' + state.maxItems + ' items'
+        : 'All caught up · latest ' + state.maxItems + ' items';
+
+      markReadButton.disabled = state.markReadPending || state.unread < 1;
     };
 
     const renderItems = function () {
       if (!state.items.length) {
-        notifList.innerHTML = '<div class="admin-notif-empty">No recent notifications yet.</div>';
+        notifList.innerHTML = [
+          '<div class="admin-notif-empty">',
+          '  <strong>No notifications yet</strong>',
+          '  <span>New admin activity will appear here automatically.</span>',
+          '</div>',
+        ].join('');
         return;
       }
 
       notifList.innerHTML = state.items.map(function (payload) {
+        const item = normalizePayload(payload, !payload.is_read);
+        const meta = typeMeta[item.type] || { label: 'Notification', icon: 'bell', className: 'bg-secondary' };
         const packages = Array.isArray(payload.package_names) && payload.package_names.length
           ? payload.package_names.join(', ')
-          : '-';
-
-        const metaParts = [
-          payload.order_id ? 'Order: ' + payload.order_id : '',
-          'Package: ' + packages,
-          'Total: ' + formatCurrency(payload.total_amount, payload.currency),
-          'People: ' + (payload.total_people || 0),
-          'Origin: ' + (payload.origin || 'Unknown'),
-          payload.source_ip ? 'IP: ' + payload.source_ip : '',
-          'Time: ' + formatDate(payload.created_at),
+          : 'No package data';
+        const facts = [
+          item.order_id ? ['Order', item.order_id] : null,
+          item.customer_name ? ['Customer', item.customer_name] : null,
+          Number(item.total_amount || 0) > 0 ? ['Amount', formatCurrency(item.total_amount, item.currency)] : null,
+          Number(item.total_people || 0) > 0 ? ['Participants', String(item.total_people)] : null,
+          packages ? ['Package', packages] : null,
+          item.origin ? ['Source', item.origin] : null,
         ].filter(Boolean);
 
-        const tagName = payload.action_url ? 'a' : 'div';
-        const hrefAttr = payload.action_url ? ' href="' + escapeHtml(payload.action_url) + '"' : '';
-        const stateClass = payload.is_read ? ' is-read' : ' is-unread';
+        const stateClass = item.is_read ? ' is-read' : ' is-unread';
+        const href = item.order_detail_url || item.action_url || '';
+        const tagName = href ? 'a' : 'div';
+        const hrefAttr = href ? ' href="' + escapeHtml(href) + '"' : '';
 
         return [
           '<' + tagName + ' class="admin-notif-item' + stateClass + '"' + hrefAttr + '>',
-          '  <h6 class="admin-notif-title">' + escapeHtml(payload.title || 'Notification') + '</h6>',
-          '  <p class="admin-notif-text">' + escapeHtml(payload.message || '-') + '</p>',
-          '  <div class="admin-notif-meta">' + metaParts.map(escapeHtml).join(' | ') + '</div>',
+          '  <div class="admin-notif-icon ' + escapeHtml(meta.className) + '">',
+          '    <i class="ti ti-' + escapeHtml(meta.icon) + '"></i>',
+          '  </div>',
+          '  <div class="admin-notif-content">',
+          '    <div class="admin-notif-item-head">',
+          '      <div>',
+          '        <div class="admin-notif-title">' + escapeHtml(item.title || meta.label) + '</div>',
+          '        <div class="admin-notif-time" title="' + escapeHtml(formatDate(item.created_at)) + '">' + escapeHtml(formatRelativeTime(item.created_at)) + '</div>',
+          '      </div>',
+          '      <span class="admin-notif-status ' + (item.is_read ? 'is-read' : 'is-unread') + '">' + (item.is_read ? 'Read' : 'Unread') + '</span>',
+          '    </div>',
+          '    <p class="admin-notif-text">' + escapeHtml(item.message || 'No additional details provided.') + '</p>',
+          '    <div class="admin-notif-facts">' + facts.map(function (fact) {
+                return '<span><strong>' + escapeHtml(fact[0]) + ':</strong> ' + escapeHtml(fact[1]) + '</span>';
+              }).join('') + '</div>',
+          '    <div class="d-flex align-items-center justify-content-between gap-2 mt-2">',
+          '      <span class="badge rounded-pill ' + escapeHtml(badgeClass(meta.className)) + '">' + escapeHtml(meta.label) + '</span>',
+          (item.order_detail_url
+            ? '      <span class="small text-primary fw-semibold">Open order <i class="ti ti-arrow-up-right ms-1"></i></span>'
+            : '      <span class="small text-muted">Open notification details</span>'),
+          '    </div>',
+          '  </div>',
           '</' + tagName + '>',
         ].join('');
       }).join('');
     };
 
     const setItems = function (items, unreadCount) {
-      state.items = Array.isArray(items) ? items.slice(0, state.maxItems) : [];
+      state.items = Array.isArray(items)
+        ? items.slice(0, state.maxItems).map(function (item) {
+            return normalizePayload(item, !item.is_read);
+          })
+        : [];
       state.unread = Number(unreadCount || 0);
       renderItems();
       updateUnreadBadge();
     };
 
     const pushNotification = function (payload, asUnread) {
-      const normalized = Object.assign({ is_read: !asUnread }, payload || {});
+      const normalized = normalizePayload(payload, asUnread);
       state.items = [normalized].concat(state.items.filter(function (item) {
         return item.notification_id !== normalized.notification_id;
       }));
@@ -231,6 +342,8 @@
         const data = await response.json();
         setItems(data.items || [], data.unread_count || 0);
       } catch (error) {
+        state.items = [];
+        state.unread = 0;
         renderItems();
         updateUnreadBadge();
       }
@@ -248,6 +361,7 @@
       }
 
       state.markReadPending = true;
+      updateUnreadBadge();
       try {
         const response = await fetch(config.markReadUrl, {
           method: 'POST',
@@ -272,21 +386,13 @@
       } catch (error) {
       } finally {
         state.markReadPending = false;
+        updateUnreadBadge();
       }
     };
 
     markReadButton.addEventListener('click', function (event) {
       event.preventDefault();
       markAllAsRead();
-    });
-
-    notifToggle.addEventListener('click', function () {
-      setTimeout(function () {
-        const expanded = notifToggle.getAttribute('aria-expanded') === 'true';
-        if (expanded) {
-          markAllAsRead();
-        }
-      }, 50);
     });
 
     fetchFeed();
@@ -331,6 +437,8 @@
     });
   })();
 </script>
+
+@include('layout.partials.admin.ai-assistant-scripts')
 
 @yield('scripts')
 

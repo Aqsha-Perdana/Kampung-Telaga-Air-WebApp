@@ -11,6 +11,8 @@
     <style>
         body {
             transition: opacity 0.22s ease, transform 0.22s ease;
+            min-height: 100vh;
+            overflow: auto;
         }
 
         body.page-enter {
@@ -28,15 +30,25 @@
             transform: translateY(8px);
         }
 
+        .login-wrapper {
+            min-height: 100vh;
+            height: auto;
+        }
+
         .register-link {
-            margin-top: 18px;
+            margin-top: 24px;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
         }
 
         .register-link p {
-            margin: 0 0 10px;
+            margin: 0;
             color: #64748b;
             font-size: 14px;
+            line-height: 1.45;
         }
 
         .btn-register {
@@ -44,9 +56,10 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            min-width: 180px;
-            padding: 11px 16px;
-            border-radius: 10px;
+            min-width: 208px;
+            min-height: 48px;
+            padding: 10px 16px;
+            border-radius: 12px;
             border: 1.5px solid #2a93cc;
             background: #f0f9ff;
             color: #247eaf;
@@ -61,6 +74,146 @@
             color: #ffffff;
             border-color: #2a93cc;
             transform: translateY(-1px);
+        }
+
+        .google-login-btn {
+            width: min(100%, 400px);
+            margin-left: auto;
+            margin-right: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 54px;
+            padding: 11px 18px;
+            border-radius: 16px;
+            border: 1.5px solid #d7e2ec;
+            background: #ffffff;
+            color: #1f2937;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+            transition: all 0.2s ease;
+        }
+
+        .google-login-btn:hover {
+            transform: translateY(-1px);
+            border-color: #bdd3e0;
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
+            color: #111827;
+        }
+
+        .google-login-btn:focus {
+            color: #111827;
+            box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.14);
+        }
+
+        .google-login-badge {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .google-login-badge svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .right-section {
+            align-items: flex-start;
+            overflow-y: auto;
+            padding: 28px 54px;
+        }
+
+        .login-container {
+            max-width: 520px;
+            width: 100%;
+            padding-inline: 10px;
+            margin: 8px 0 20px;
+        }
+
+        .login-header {
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .login-header h2 {
+            line-height: 1.14;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            line-height: 1.55;
+            max-width: 400px;
+            margin-bottom: 0;
+        }
+
+        .mb-4 {
+            margin-bottom: 1.1rem !important;
+        }
+
+        .input-wrapper {
+            margin-bottom: 18px;
+        }
+
+        .form-control {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            min-height: 52px;
+        }
+
+        .btn-login {
+            padding: 14px 16px;
+        }
+
+        .back-link {
+            margin-top: 22px;
+        }
+
+        .footer-text {
+            margin-top: 22px;
+            padding-top: 16px;
+        }
+
+        .footer-text p {
+            line-height: 1.5;
+        }
+
+        @media (max-width: 992px) {
+            .right-section {
+                padding: 24px 26px;
+            }
+
+            .login-container {
+                max-width: 540px;
+                padding-inline: 0;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .right-section {
+                padding: 18px 18px 24px;
+            }
+
+            .register-link {
+                gap: 12px;
+            }
+
+            .btn-register,
+            .google-login-btn {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .footer-text {
+                margin-top: 20px;
+                padding-top: 14px;
+            }
         }
     </style>
 </head>
@@ -146,6 +299,7 @@
                                 Remember Me
                             </label>
                         </div>
+                        <a href="{{ route('wisatawan.password.request') }}" class="small text-decoration-none">Forgot password?</a>
                     </div>
 
                     <button type="submit" class="btn btn-login">
@@ -158,6 +312,17 @@
                     <a href="{{ route('wisatawan.register') }}" class="btn-register js-page-transition">
                         <i class="bi bi-person-plus"></i>
                         Register Now
+                    </a>
+                    <a href="{{ route('google.login') }}" class="google-login-btn">
+                        <span class="google-login-badge">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path fill="#4285F4" d="M21.81 10.04H12v3.95h5.63c-.27 1.27-1.03 2.34-2.17 3.06v2.54h3.5c2.05-1.89 3.22-4.69 3.22-8.03 0-.53-.05-1.05-.14-1.52Z"/>
+                                <path fill="#34A853" d="M12 22c2.91 0 5.35-.96 7.13-2.61l-3.5-2.54c-.97.65-2.2 1.04-3.63 1.04-2.79 0-5.16-1.88-6-4.4H2.39v2.62A10 10 0 0 0 12 22Z"/>
+                                <path fill="#FBBC05" d="M6 13.49A5.98 5.98 0 0 1 5.66 12c0-.52.09-1.02.24-1.49V7.89H2.39A10 10 0 0 0 1.33 12c0 1.62.39 3.14 1.06 4.51L6 13.49Z"/>
+                                <path fill="#EA4335" d="M12 6.11c1.58 0 2.99.54 4.11 1.61l3.08-3.08C17.34 2.91 14.91 2 12 2a10 10 0 0 0-9.61 5.89l3.51 2.62c.84-2.52 3.21-4.4 6.1-4.4Z"/>
+                            </svg>
+                        </span>
+                        <span>Login with Google</span>
                     </a>
                 </div>
 

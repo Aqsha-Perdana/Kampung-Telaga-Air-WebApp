@@ -18,6 +18,8 @@
       <div class="container-fluid" style="padding-bottom: 2rem;">
         @yield('content')
       </div>
+
+      @include('layout.partials.admin.ai-assistant')
     </div>
   </div>
 

@@ -1,4 +1,4 @@
-﻿<!-- Header Start -->
+<!-- Header Start -->
 <header class="app-header">
   <nav class="navbar navbar-expand-lg navbar-light">
     <ul class="navbar-nav">
@@ -8,7 +8,7 @@
         </a>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="adminNotifToggle" data-bs-toggle="dropdown"
+        <a class="nav-link nav-icon-hover admin-notif-trigger" href="javascript:void(0)" id="adminNotifToggle" data-bs-toggle="dropdown"
           aria-expanded="false" aria-label="Admin notifications">
           <i class="ti ti-bell-ringing"></i>
           <div class="notification bg-primary rounded-circle" id="adminNotifPing"></div>
@@ -16,15 +16,22 @@
         </a>
         <div class="dropdown-menu admin-notif-dropdown" aria-labelledby="adminNotifToggle">
           <div class="admin-notif-header">
-            <h6 class="mb-0">Notifications</h6>
+            <div>
+              <h6 class="mb-0">Notifications</h6>
+              <small class="text-muted">Live activity from bookings, payments, and refunds</small>
+            </div>
             <button type="button" class="btn btn-link p-0 small" id="adminNotifMarkRead">Mark all as read</button>
           </div>
           <div class="admin-notif-list" id="adminNotifList">
-            <div class="admin-notif-empty">No recent notifications yet.</div>
+            <div class="admin-notif-empty">
+              <strong>No notifications yet</strong>
+              <span>New admin activity will appear here automatically.</span>
+            </div>
           </div>
-          <div class="border-top px-3 py-2 text-end">
+          <div class="admin-notif-footer border-top px-3 py-2 d-flex justify-content-between align-items-center gap-2">
+            <small class="text-muted" id="adminNotifFooterText">Latest 10 items</small>
             <a href="{{ route('admin.notifications.index') }}" class="btn btn-sm btn-outline-primary">
-              <i class="ti ti-list-details"></i> View history
+              <i class="ti ti-list-details me-1"></i> View all
             </a>
           </div>
         </div>
@@ -44,7 +51,7 @@
                 <small class="text-muted">{{ $adminUser->email }}</small>
                 <br>
                 <span class="badge bg-primary mt-1">
-                  {{ $adminUser->isAdmin() ? 'Admin' : 'Pengelola' }}
+                  {{ $adminUser->isAdmin() ? 'Admin' : 'Manager' }}
                 </span>
               </div>
               <a href="{{ route('admin.profile') }}" class="d-block px-3 py-2 border-bottom text-decoration-none">

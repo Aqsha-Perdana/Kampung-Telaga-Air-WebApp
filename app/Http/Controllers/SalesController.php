@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\OrderItemSnapshotService;
+use App\Services\CustomerEmailService;
 use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,10 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SalesController extends Controller
 {
-    public function __construct(private readonly OrderItemSnapshotService $snapshotService)
+    public function __construct(
+        private readonly OrderItemSnapshotService $snapshotService,
+        private readonly CustomerEmailService $customerEmailService
+    )
     {
     }
 
@@ -517,6 +521,9 @@ class SalesController extends Controller
             'refund_rejected_reason' => $request->reason,
             'refund_failure_reason' => null,
         ]);
+
+        $order->loadMissing('items');
+        $this->customerEmailService->sendRefundRejected($order);
 
         return redirect()->back()->with('success', 'Refund request rejected. Order status has been restored to Paid.');
     }
