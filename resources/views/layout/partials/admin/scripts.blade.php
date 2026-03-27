@@ -1,6 +1,7 @@
 ﻿{{-- Base Scripts --}}
 <script src="{{ asset('assets/libs/jquery/dist/jquery.min.js') }}"></script>
 <script src="{{ asset('assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ asset('assets/js/sidebarmenu.js') }}"></script>
 <script src="{{ asset('assets/js/app.min.js') }}"></script>
 <script src="{{ asset('assets/libs/simplebar/dist/simplebar.js') }}"></script>
@@ -11,10 +12,15 @@
   {{-- Scripts handled by Vite/dashboard.js --}}
 @endif
 
+<x-admin.delete-swal />
+
 @php
   $broadcastDriver = (string) config('broadcasting.default');
   $pusherConnection = config('broadcasting.connections.pusher', []);
   $pusherOptions = $pusherConnection['options'] ?? [];
+  $notificationFeedPath = parse_url(route('admin.notifications.feed'), PHP_URL_PATH) ?: route('admin.notifications.feed');
+  $notificationMarkReadPath = parse_url(route('admin.notifications.mark-read'), PHP_URL_PATH) ?: route('admin.notifications.mark-read');
+  $notificationIndexPath = parse_url(route('admin.notifications.index'), PHP_URL_PATH) ?: route('admin.notifications.index');
 @endphp
 
 <script>
@@ -25,11 +31,11 @@
     host: @json((string) ($pusherOptions['host'] ?? '')),
     port: @json((int) ($pusherOptions['port'] ?? 443)),
     scheme: @json((string) ($pusherOptions['scheme'] ?? 'https')),
-    authEndpoint: @json(url('/admin/broadcasting/auth')),
+    authEndpoint: @json(parse_url(url('/admin/broadcasting/auth'), PHP_URL_PATH) ?: url('/admin/broadcasting/auth')),
     csrfToken: @json(csrf_token()),
-    feedUrl: @json(route('admin.notifications.feed')),
-    markReadUrl: @json(route('admin.notifications.mark-read')),
-    notificationsUrl: @json(route('admin.notifications.index')),
+    feedUrl: @json($notificationFeedPath),
+    markReadUrl: @json($notificationMarkReadPath),
+    notificationsUrl: @json($notificationIndexPath),
   };
 </script>
 
@@ -80,6 +86,52 @@
         item.classList.remove('is-pending');
       });
     });
+  })();
+</script>
+
+<script>
+  (function () {
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    if (!sidebarNav) {
+      return;
+    }
+
+    const storageKey = 'admin.sidebar.scrollTop';
+
+    const getScrollElement = function () {
+      return sidebarNav.querySelector('.simplebar-content-wrapper') || sidebarNav;
+    };
+
+    const saveScrollPosition = function () {
+      const scroller = getScrollElement();
+      sessionStorage.setItem(storageKey, String(scroller.scrollTop || 0));
+    };
+
+    const restoreScrollPosition = function () {
+      const scroller = getScrollElement();
+      const savedScrollTop = sessionStorage.getItem(storageKey);
+      const activeItem = sidebarNav.querySelector('.sidebar-item.active');
+
+      if (savedScrollTop !== null) {
+        scroller.scrollTop = parseInt(savedScrollTop, 10) || 0;
+      } else if (activeItem) {
+        activeItem.scrollIntoView({ block: 'center', behavior: 'auto' });
+      }
+    };
+
+    const bindScroller = function () {
+      const scroller = getScrollElement();
+      scroller.addEventListener('scroll', saveScrollPosition, { passive: true });
+      window.addEventListener('beforeunload', saveScrollPosition, { once: true });
+      window.addEventListener('pagehide', saveScrollPosition, { once: true });
+      setTimeout(restoreScrollPosition, 0);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bindScroller, { once: true });
+    } else {
+      bindScroller();
+    }
   })();
 </script>
 

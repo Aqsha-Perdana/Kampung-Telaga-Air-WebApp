@@ -278,7 +278,7 @@
                                     <form action="{{ route('beban-operasional.destroy', $beban) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this beban {{ $beban->kode_transaksi }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('beban-operasional.destroy', $beban) }}', itemLabel: @js($beban->kode_transaksi), title: 'Delete Expense?', html: 'This will permanently delete <strong>' + @js($beban->kode_transaksi) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -376,37 +376,6 @@
     @endif
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center py-3">
-                    <div class="mb-3">
-                        <i class="bi bi-exclamation-triangle text-warning display-3"></i>
-                    </div>
-                    <p class="mb-0">Are you sure you want to delete expense <strong id="expenseCode"></strong>?</p>
-                    <p class="text-muted small mb-0">This action cannot be undone.</p>
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <form id="deleteForm" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash me-2"></i>Delete
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
 /* Enhanced Styling */
 .stat-card {
@@ -485,10 +454,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function confirmDelete(code, url) {
-    document.getElementById('expenseCode').textContent = code;
-    document.getElementById('deleteForm').action = url;
-    var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    modal.show();
+    adminDeleteSwal({
+        actionUrl: url,
+        itemLabel: code,
+        title: 'Delete Expense?',
+        html: 'This will permanently delete <strong>' + code + '</strong>. This action cannot be undone.'
+    });
 }
 </script>
 @endsection

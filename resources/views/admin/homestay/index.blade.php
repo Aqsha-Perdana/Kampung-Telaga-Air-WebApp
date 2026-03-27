@@ -192,7 +192,7 @@
                                     <form action="{{ route('homestays.destroy', $homestay) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this homestay {{ $homestay->nama }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('homestays.destroy', $homestay) }}', itemLabel: @js($homestay->nama), title: 'Delete Homestay?', html: 'This will permanently delete <strong>' + @js($homestay->nama) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -308,7 +308,7 @@
                                 <form action="{{ route('homestays.destroy', $homestay) }}" 
                                       method="POST" 
                                       class="d-inline w-50"
-                                      onsubmit="return confirm('Are you sure you want to delete this homestay {{ $homestay->nama }}?')">
+                                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('homestays.destroy', $homestay) }}', itemLabel: @js($homestay->nama), title: 'Delete Homestay?', html: 'This will permanently delete <strong>' + @js($homestay->nama) + '</strong>. This action cannot be undone.' });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">

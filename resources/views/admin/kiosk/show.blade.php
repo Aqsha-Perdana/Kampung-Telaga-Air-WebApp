@@ -119,7 +119,7 @@
                 <form action="{{ route('kiosks.destroy', $kiosk->id_kiosk) }}" 
                       method="POST" 
                       style="display: inline;"
-                      onsubmit="return confirm('Yakin ingin menghapus kiosk ini beserta {{ $kiosk->fotos->count() }} foto?')">
+                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('kiosks.destroy', $kiosk->id_kiosk) }}', itemLabel: @js($kiosk->nama), title: 'Delete Kiosk?', html: 'This will permanently delete <strong>' + @js($kiosk->nama) + '</strong> and its ' + @js($kiosk->fotos->count()) + ' photo(s). This action cannot be undone.' });">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">

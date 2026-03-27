@@ -8,19 +8,15 @@
         'refunded' => ['label' => 'Refunded', 'class' => 'dark', 'icon' => 'arrow-counterclockwise'],
     ];
 
-    $paymentMethodMeta = [
-        'stripe' => ['label' => 'Credit/Debit Card (Stripe)', 'icon' => 'credit-card'],
-    ];
-
     $status = $statusMeta[$order->status] ?? [
         'label' => ucfirst(str_replace('_', ' ', $order->status)),
         'class' => 'secondary',
         'icon' => 'info-circle',
     ];
 
-    $paymentMethod = $paymentMethodMeta[$order->payment_method] ?? [
-        'label' => strtoupper((string) $order->payment_method),
-        'icon' => 'wallet2',
+    $paymentMethod = [
+        'label' => payment_method_label($order->payment_method),
+        'icon' => payment_method_icon($order->payment_method),
     ];
 
     $amount = (float) ($order->base_amount ?? $order->total_amount ?? 0);
@@ -651,7 +647,6 @@
         </div>
     </div>
 </section>
-
 
 
 

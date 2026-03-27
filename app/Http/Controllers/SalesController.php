@@ -400,12 +400,14 @@ class SalesController extends Controller
         }
 
         $reportedProfitImpact = $order->status === 'refunded'
-            ? (float) ($order->refund_fee ?? 0)
-            : $originalProfitSnapshot;
+            ? (float) ($order->refund_fee ?? 0) - (float) ($order->gateway_fee_amount ?? 0)
+            : $originalProfitSnapshot - (float) ($order->gateway_fee_amount ?? 0);
 
         $financialSummary = [
             'vendor_total' => $vendorTotalSnapshot,
             'original_profit' => $originalProfitSnapshot,
+            'gateway_fee' => (float) ($order->gateway_fee_amount ?? 0),
+            'gateway_net_amount' => (float) ($order->gateway_net_amount ?? ((float) ($order->base_amount ?? 0) - (float) ($order->gateway_fee_amount ?? 0))),
             'reported_profit_impact' => $reportedProfitImpact,
         ];
 

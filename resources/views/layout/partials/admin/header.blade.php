@@ -1,6 +1,9 @@
+@php
+  $notificationsIndexPath = parse_url(route('admin.notifications.index'), PHP_URL_PATH) ?: route('admin.notifications.index');
+@endphp
 <!-- Header Start -->
 <header class="app-header">
-  <nav class="navbar navbar-expand-lg navbar-light">
+  <nav class="navbar navbar-expand-lg navbar-light w-100">
     <ul class="navbar-nav">
       <li class="nav-item d-block d-xl-none">
         <a class="nav-link sidebartoggler nav-icon-hover" id="headerCollapse" href="javascript:void(0)">
@@ -30,15 +33,15 @@
           </div>
           <div class="admin-notif-footer border-top px-3 py-2 d-flex justify-content-between align-items-center gap-2">
             <small class="text-muted" id="adminNotifFooterText">Latest 10 items</small>
-            <a href="{{ route('admin.notifications.index') }}" class="btn btn-sm btn-outline-primary">
+            <a href="{{ $notificationsIndexPath }}" class="btn btn-sm btn-outline-primary">
               <i class="ti ti-list-details me-1"></i> View all
             </a>
           </div>
         </div>
       </li>
     </ul>
-    <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
-      <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
+    <div class="navbar-collapse navbar-right" id="navbarNav">
+      <ul class="navbar-nav flex-row align-items-center justify-content-end">
         <li class="nav-item dropdown">
           <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
             aria-expanded="false">

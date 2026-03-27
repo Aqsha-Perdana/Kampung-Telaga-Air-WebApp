@@ -1,6 +1,9 @@
 @extends('landing.layout')
 
 @section('content')
+@php
+    $paymentMethodLabel = payment_method_label($order->payment_method);
+@endphp
 <section class="py-5" style="margin-top: 80px;">
     <div class="container">
         <div class="row justify-content-center">
@@ -76,7 +79,7 @@
                                 <div class="row mb-2">
                                     <div class="col-4 text-muted">Payment Method:</div>
                                     <div class="col-8">
-                                        <strong>Credit/Debit Card (Stripe)</strong>
+                                        <strong>{{ $paymentMethodLabel }}</strong>
                                     </div>
                                 </div>
 
@@ -227,7 +230,7 @@
                                 </p>
                                 @endif
                                 <p class="mb-0">
-                                    <strong>Method:</strong> Credit/Debit Card (Stripe)
+                                    <strong>Method:</strong> {{ $paymentMethodLabel }}
                                 </p>
                             </div>
 

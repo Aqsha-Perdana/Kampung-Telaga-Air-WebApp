@@ -150,6 +150,7 @@
     <div class="mfrs-note no-break">
         <strong>MANAGEMENT NOTES:</strong><br>
         This report has been prepared in accordance with the requirements of Malaysian Financial Reporting Standards (MFRS 101). 
+        Revenue is presented on a gross basis, while payment gateway fees are classified separately under operating expenses.
         The net profit margin was recorded at {{ number_format($profitLoss['profit_for_period']['margin_percentage'], 1) }}% of total operating income RM {{ number_format($profitLoss['revenue']['total_revenue'], 2) }}.
     </div>
 

@@ -13,7 +13,12 @@ class PaymentLog extends Model
         'id_order',
         'payment_intent_id',
         'payment_method',
+        'payment_channel',
         'amount',
+        'fee_amount',
+        'fee_currency',
+        'net_amount',
+        'fee_source',
         'currency',
         'status',
         'response_data'
@@ -21,6 +26,8 @@ class PaymentLog extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'fee_amount' => 'decimal:2',
+        'net_amount' => 'decimal:2',
         'response_data' => 'array'
     ];
 

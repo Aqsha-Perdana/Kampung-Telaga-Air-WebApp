@@ -220,8 +220,12 @@ Route::middleware(['auth', 'verified.visitor'])->prefix('api')->group(function (
         ->middleware('throttle:order-status');
 });
 
-Route::post('/webhook/stripe', [CheckoutController::class, 'webhook'])
+Route::post('/webhook/stripe', [CheckoutController::class, 'webhookStripe'])
     ->name('webhook.stripe')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::post('/webhook/xendit', [CheckoutController::class, 'webhookXendit'])
+    ->name('webhook.xendit')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::get('/invoice/{order}', [OrderController::class, 'download'])

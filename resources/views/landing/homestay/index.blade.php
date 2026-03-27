@@ -156,6 +156,7 @@
                                      style="object-fit: cover;" 
                                      alt="{{ $homestay->nama }}"
                                      loading="lazy"
+                                     decoding="async"
                                      onerror="this.onerror=null; this.src='{{ asset('assets/images/default-homestay.jpg') }}';">
                             @else
                                 <div class="h-100 w-100 d-flex align-items-center justify-content-center" 
@@ -192,10 +193,10 @@
                                     <i class="bi bi-people me-2"></i>
                                     <span>Capacity: {{ $homestay->kapasitas }} people</span>
                                 </div>
-                                @if($homestay->paketWisatas->count() > 0)
+                                @if(($homestay->paket_wisatas_count ?? 0) > 0)
                                 <div class="d-flex align-items-center text-muted small mb-2">
                                     <i class="bi bi-bookmark-check me-2"></i>
-                                    <span>Included in {{ $homestay->paketWisatas->count() }} Tour Package</span>
+                                    <span>Included in {{ $homestay->paket_wisatas_count }} Tour Package</span>
                                 </div>
                                 @endif
                                 <div class="d-flex align-items-center text-success small">
@@ -273,33 +274,4 @@
     </section>
 </div>
 
-<style>
-.hover-lift {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.hover-lift:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-}
-
-.homestay-card .card-img-top {
-    transition: transform 0.3s ease;
-}
-
-.homestay-card:hover .card-img-top {
-    transform: scale(1.1);
-}
-
-.info-card {
-    padding: 30px 20px;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-}
-
-.info-card:hover {
-    background: white;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-}
-</style>
 @endsection

@@ -61,9 +61,17 @@ class AdminNotification extends Model
             'source_ip' => (string) ($this->source_ip ?? ''),
             'status' => (string) ($this->status ?? ''),
             'created_at' => optional($this->event_created_at ?? $this->created_at)?->toIso8601String(),
-            'action_url' => route('admin.notifications.index'),
-            'order_detail_url' => $this->order_id ? route('sales.detail', $this->order_id) : null,
+            'action_url' => $this->toInternalPath(route('admin.notifications.index')),
+            'order_detail_url' => $this->order_id
+                ? $this->toInternalPath(route('sales.detail', ['orderId' => $this->order_id]))
+                : null,
         ], $this->meta ?? []);
     }
-}
 
+    private function toInternalPath(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        return is_string($path) && $path !== '' ? $path : $url;
+    }
+}

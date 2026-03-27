@@ -159,6 +159,7 @@
                                      style="object-fit: cover;" 
                                      alt="{{ $culinary->nama }}"
                                      loading="lazy"
+                                     decoding="async"
                                      onerror="this.onerror=null; this.src='{{ asset('assets/images/default-culinary.jpg') }}';">
                             @else
                                 <div class="h-100 w-100 d-flex align-items-center justify-content-center" 
@@ -178,16 +179,16 @@
                             @endif
 
                             <!-- Badge Paket -->
-                            @if($culinary->pakets->count() > 0)
+                            @if(($culinary->pakets_count ?? 0) > 0)
                             <span class="position-absolute top-0 end-0 m-3 badge bg-success">
-                                <i class="bi bi-tag"></i> {{ $culinary->pakets->count() }} Package
+                                <i class="bi bi-tag"></i> {{ $culinary->pakets_count }} Package
                             </span>
                             @endif
 
                             <!-- Badge Foto Count -->
-                            @if($culinary->fotos->count() > 1)
+                            @if(($culinary->fotos_count ?? 0) > 1)
                             <span class="position-absolute bottom-0 end-0 m-3 badge bg-dark bg-opacity-75">
-                                <i class="bi bi-images"></i> {{ $culinary->fotos->count() }} Photo
+                                <i class="bi bi-images"></i> {{ $culinary->fotos_count }} Photo
                             </span>
                             @endif
                         </div>
@@ -211,23 +212,23 @@
                             <div class="mb-3">
                                 <div class="d-flex align-items-center text-muted small mb-2">
                                     <i class="bi bi-images me-2"></i>
-                                    <span>{{ $culinary->fotos->count() }} Menu Photos</span>
+                                    <span>{{ $culinary->fotos_count ?? 0 }} Menu Photos</span>
                                 </div>
-                                @if($culinary->pakets->count() > 0)
+                                @if(($culinary->pakets_count ?? 0) > 0)
                                 <div class="d-flex align-items-center text-muted small">
                                     <i class="bi bi-bag-check me-2"></i>
-                                    <span>{{ $culinary->pakets->count() }} Package Available</span>
+                                    <span>{{ $culinary->pakets_count }} Package Available</span>
                                 </div>
                                 @endif
                             </div>
 
                             <!-- Button -->
                             <div class="d-flex justify-content-between align-items-center mt-auto border-top pt-3">
-                                @if($culinary->pakets->count() > 0)
+                                @if(($culinary->pakets_count ?? 0) > 0)
                                 <div>
                                     <small class="text-muted d-block">Start From</small>
                                     <strong class="text-primary">
-                                    {{ format_ringgit($culinary->pakets->min('harga')) }}
+                                    {{ format_ringgit($culinary->pakets_min_harga ?? 0) }}
                                     </strong>
                                 </div>
                                 @else
@@ -297,33 +298,4 @@
 
 </div>
 
-<style>
-.hover-lift {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.hover-lift:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-}
-
-.culinary-card .card-img-top {
-    transition: transform 0.3s ease;
-}
-
-.culinary-card:hover .card-img-top {
-    transform: scale(1.1);
-}
-
-.info-card {
-    padding: 30px 20px;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-}
-
-.info-card:hover {
-    background: white;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-}
-</style>
 @endsection

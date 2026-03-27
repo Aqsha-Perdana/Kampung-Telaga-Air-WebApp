@@ -46,16 +46,46 @@
     transition: all 0.3s ease;
 }
 
-.sticky-bottom {
-    position: sticky;
-    bottom: 20px;
-    z-index: 10;
+.admin-show-actions {
+    margin-top: 1.5rem;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    border: 1px solid rgba(13, 110, 253, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 255, 1) 100%);
+}
+
+.admin-show-actions-shell {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.admin-show-delete-form {
+    display: inline-flex;
+}
+
+.admin-show-action-btn {
+    min-width: 190px;
+    border-radius: 0.95rem;
+    padding-left: 1.35rem;
+    padding-right: 1.35rem;
 }
 
 @media (max-width: 768px) {
-    .sticky-bottom {
-        position: relative;
-        bottom: 0;
+    .admin-show-actions-shell {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-show-action-btn,
+    .admin-show-delete-form {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .admin-show-actions .card-body {
+        padding: 1.25rem;
     }
 }
 </style>

@@ -81,7 +81,7 @@
                     <form action="{{ route('beban-operasional.destroy', $bebanOperasional) }}" 
                           method="POST" 
                           class="d-inline"
-                          onsubmit="return confirm('Yakin ingin menghapus data ini?')">
+                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('beban-operasional.destroy', $bebanOperasional) }}', itemLabel: @js($bebanOperasional->nama ?? 'this record'), title: 'Delete Expense?', html: 'This will permanently delete <strong>' + @js($bebanOperasional->nama ?? 'this record') + '</strong>. This action cannot be undone.' });">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-danger">

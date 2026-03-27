@@ -97,13 +97,26 @@
 
                             <div class="payment-methods mb-4">
                                 <div class="form-check payment-method-card mb-3">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="stripe" value="stripe" checked>
+                                    <input class="form-check-input payment-method-input" type="radio" name="payment_method" id="stripe" value="stripe" {{ config('payment.default', 'stripe') === 'stripe' ? 'checked' : '' }}>
                                     <label class="form-check-label w-100" for="stripe">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <div>
                                                 <i class="bi bi-credit-card text-primary"></i>
-                                                <strong>Credit/Debit Card</strong>
+                                                <strong>{{ payment_method_label('stripe') }}</strong>
                                                 <p class="mb-0 small text-muted">Visa, Mastercard, Amex</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="form-check payment-method-card mb-0">
+                                    <input class="form-check-input payment-method-input" type="radio" name="payment_method" id="xendit" value="xendit" {{ config('payment.default', 'stripe') === 'xendit' ? 'checked' : '' }}>
+                                    <label class="form-check-label w-100" for="xendit">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div>
+                                                <i class="bi bi-wallet2 text-success"></i>
+                                                <strong>{{ payment_method_label('xendit') }}</strong>
+                                                <p class="mb-0 small text-muted">Hosted checkout via Xendit sandbox</p>
                                             </div>
                                         </div>
                                     </label>
@@ -114,6 +127,13 @@
                                 <h6 class="mb-3">Card Information</h6>
                                 <div id="card-element" class="form-control mb-2" style="height: 40px; padding-top: 10px;"></div>
                                 <div id="card-errors" class="text-danger mt-2"></div>
+                            </div>
+
+                            <div id="xendit-section" class="payment-section d-none">
+                                <div class="alert alert-info mb-0">
+                                    <strong>{{ payment_method_label('xendit') }}</strong><br>
+                                    You will be redirected to the Xendit hosted payment page to complete your payment securely.
+                                </div>
                             </div>
 
                             <div class="d-grid gap-2 mt-4">

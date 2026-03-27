@@ -129,12 +129,47 @@
                                             $profitPersen = $paketWisata->harga_modal > 0 ? (($profit / $paketWisata->harga_modal) * 100) : 0;
                                         @endphp
                                         <small class="text-muted">
-                                            Profit: {{ format_ringgit($profit) }} ({{ number_format($profitPersen, 2) }}%)
+                                            Gross Profit: {{ format_ringgit($profit) }} ({{ number_format($profitPersen, 2) }}%)
                                         </small>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        {{-- Payment & Profit Analysis Card --}}
+                        <div class="col-md-12">
+                            @php
+                                $pricingBufferShow = $paketWisata->harga_modal * package_fee_buffer_percentage();
+                                $netProfitShow = $profit - $pricingBufferShow;
+                            @endphp
+                            <div class="card border-primary mb-0">
+                                <div class="card-header bg-primary text-white py-2">
+                                    <h6 class="mb-0"><i class="bi bi-cash-stack"></i> Company Profit Analysis</h6>
+                                </div>
+                                <div class="card-body py-2">
+                                    <div class="row g-2">
+                                        <div class="col-md-3 col-6">
+                                            <small class="text-muted d-block">Cost Price</small>
+                                            <span class="fw-bold text-danger">RM {{ format_ringgit($paketWisata->harga_modal) }}</span>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <small class="text-muted d-block"><i class="bi bi-shield-check"></i> Pricing Buffer ({{ package_fee_buffer_label() }})</small>
+                                            <span class="fw-bold text-warning">RM {{ format_ringgit($pricingBufferShow) }}</span>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <small class="text-muted d-block">Gross Profit</small>
+                                            <span class="fw-bold text-success">RM {{ format_ringgit($profit) }}</span>
+                                        </div>
+                                        <div class="col-md-3 col-6">
+                                            <small class="text-muted d-block">Profit After Buffer</small>
+                                            <span class="fw-bold {{ $netProfitShow >= 0 ? 'text-success' : 'text-danger' }}">
+                                                RM {{ format_ringgit($netProfitShow) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="col-md-6">
                             <div class="info-box p-3 bg-light rounded">
                                 <div class="d-flex align-items-center">
@@ -466,22 +501,35 @@
     @endif
 
     <!-- Action Buttons -->
-    <div class="card border-0 shadow-sm sticky-bottom">
-        <div class="card-body">
-            <div class="d-flex gap-2 justify-content-center flex-wrap">
-                <a href="{{ route('paket-wisata.edit', $paketWisata->id_paket) }}" class="btn btn-warning btn-lg px-4">
+    <div class="card border-0 shadow-sm admin-show-actions">
+        <div class="card-body px-3 px-md-4 py-4">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+                <div>
+                    <p class="text-uppercase text-muted small fw-semibold mb-1">Package Actions</p>
+                    <h5 class="mb-1">Manage this tour package</h5>
+                    <p class="text-muted mb-0">Edit the package, return to the list, or remove it if it is no longer needed.</p>
+                </div>
+                <div class="text-lg-end">
+                    <span class="badge rounded-pill text-bg-light border text-secondary px-3 py-2">Tour Package Details</span>
+                </div>
+            </div>
+
+            <div class="admin-show-actions-shell">
+                <a href="{{ route('paket-wisata.edit', $paketWisata->id_paket) }}" class="btn btn-warning btn-lg shadow-sm admin-show-action-btn">
                     <i class="ti ti-edit me-2"></i>Edit Package
                 </a>
-                <a href="{{ route('paket-wisata.index') }}" class="btn btn-outline-secondary btn-lg px-4">
+
+                <a href="{{ route('paket-wisata.index') }}" class="btn btn-outline-secondary btn-lg shadow-sm admin-show-action-btn">
                     <i class="ti ti-arrow-left me-2"></i>Back
                 </a>
-                <form action="{{ route('paket-wisata.destroy', $paketWisata->id_paket) }}" 
-                      method="POST" 
-                      style="display: inline;"
+
+                <form action="{{ route('paket-wisata.destroy', $paketWisata->id_paket) }}"
+                      method="POST"
+                      class="admin-show-delete-form"
                       onsubmit="return confirm('Are you sure you want to delete this tour package {{ $paketWisata->nama_paket }}? Deleted data cannot be restored!')">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-danger btn-lg px-4">
+                    <button type="submit" class="btn btn-danger btn-lg shadow-sm admin-show-action-btn">
                         <i class="ti ti-trash me-2"></i>Delete Package
                     </button>
                 </form>
@@ -489,4 +537,3 @@
         </div>
     </div>
 </div>
-

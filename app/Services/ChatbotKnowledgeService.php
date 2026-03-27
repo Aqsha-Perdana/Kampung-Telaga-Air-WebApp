@@ -174,7 +174,7 @@ class ChatbotKnowledgeService
         $items = [
             'Tambah ke cart memerlukan akun wisatawan login.',
             'Tanggal keberangkatan saat tambah/update cart minimal 3 hari dari hari ini.',
-            'Checkout saat ini hanya mendukung pembayaran kartu melalui Stripe.',
+            'Checkout mendukung pembayaran melalui Stripe dan Xendit.',
             'Mata uang display checkout: MYR, USD, IDR, SGD, EUR, GBP, AUD, JPY, CNY.',
             'Status order yang umum: pending, paid, failed, cancelled, refund_requested, refunded.',
             'Refund hanya dapat diajukan untuk order dengan status paid.',

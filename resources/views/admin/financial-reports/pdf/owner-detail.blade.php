@@ -383,7 +383,7 @@
                             </tr>
                             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
                             <tr>
-                                <td class="ps-5 text-muted small">via {{ $method === 'stripe' ? 'Credit/Debit Card (Stripe)' : ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
+                                <td class="ps-5 text-muted small">via {{ payment_method_label($method) }} ({{ $data['count'] }} transactions)</td>
                                 <td class="text-end text-muted small">{{ format_ringgit_report($data['amount']) }}</td>
                             </tr>
                             @endforeach
@@ -681,7 +681,6 @@
 }
 </style>
 @endsection
-
 
 
 

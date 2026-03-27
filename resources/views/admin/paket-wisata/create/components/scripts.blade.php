@@ -1,5 +1,105 @@
-﻿<script>
+<script>
 let itineraryCount = 1;
+
+// Preview foto sebelum upload
+function previewFoto(input) {
+    const preview = document.getElementById('foto-preview');
+    const img = document.getElementById('foto-preview-img');
+    if (input.files && input.files[0]) {
+        img.src = URL.createObjectURL(input.files[0]);
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// ============================================================
+// TARGET PROFIT & RECOMMENDED PRICE CALCULATOR
+// Formula: selling_price = cost_price + target_profit + (cost_price * buffer_percentage)
+// ============================================================
+const PACKAGE_BUFFER_PERCENTAGE = {{ package_fee_buffer_percentage() }};
+let _lastRecommendedPrice = 0;
+let _recommendedPriceRequestToken = 0;
+
+async function calculateRecommendedPrice() {
+    const costPrice = parseFloat(document.getElementById('display_harga_modal')?.value?.replace(/,/g, '')) || 0;
+    const targetProfit = parseFloat(document.getElementById('target_profit').value) || 0;
+    const card = document.getElementById('recommendation-card');
+
+    if (targetProfit <= 0 && costPrice <= 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    const requestToken = ++_recommendedPriceRequestToken;
+
+    try {
+        const response = await fetch('{{ route('paket-wisata.calculate-price') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                cost_price: costPrice,
+                target_profit: targetProfit,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (requestToken !== _recommendedPriceRequestToken) {
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(data?.message || 'Failed to calculate recommended price.');
+        }
+
+        const sellingPrice = parseFloat(data.selling_price) || 0;
+        const estimatedFee = parseFloat(data.estimated_fee) || 0;
+        const netProfit = parseFloat(data.net_profit) || 0;
+
+        _lastRecommendedPrice = sellingPrice;
+
+        document.getElementById('rec_selling_price').textContent = 'RM ' + formatRinggit(sellingPrice);
+        document.getElementById('rec_estimated_fee').textContent = 'RM ' + formatRinggit(estimatedFee);
+        document.getElementById('rec_net_profit').textContent = 'RM ' + formatRinggit(netProfit);
+        card.style.display = 'block';
+    } catch (error) {
+        // Fallback to local calculation if the API is unavailable.
+        const estimatedFee = costPrice * PACKAGE_BUFFER_PERCENTAGE;
+        const rawPrice = costPrice + targetProfit + estimatedFee;
+        const sellingPrice = Math.ceil(rawPrice);
+        const netProfit = sellingPrice - estimatedFee - costPrice;
+
+        _lastRecommendedPrice = sellingPrice;
+
+        document.getElementById('rec_selling_price').textContent = 'RM ' + formatRinggit(sellingPrice);
+        document.getElementById('rec_estimated_fee').textContent = 'RM ' + formatRinggit(estimatedFee);
+        document.getElementById('rec_net_profit').textContent = 'RM ' + formatRinggit(netProfit);
+        card.style.display = 'block';
+    }
+}
+
+function applyRecommendedPrice() {
+    if (_lastRecommendedPrice > 0) {
+        document.getElementById('harga_jual').value = _lastRecommendedPrice;
+        calculatePricing();
+    }
+}
+
+
+// Toggle enable/disable pada input hari/malam berdasarkan status checkbox
+function toggleItemInputs(checkbox) {
+    const card = checkbox.closest('.item-card');
+    if (!card) return;
+    const inputs = card.querySelectorAll('input[type="number"]:not([type="checkbox"])');
+    inputs.forEach(input => {
+        input.disabled = !checkbox.checked;
+    });
+}
 
 // Add Recommended Item Function
 function addRecommendedItem(type, id) {
@@ -156,8 +256,6 @@ function calculatePricing() {
     let breakdownHTML = '';
     let itemCount = 0;
     
-    console.log('=== Starting Price Calculation ===');
-    
     // Calculate Homestay (price x nights)
     const homestayCheckboxes = document.querySelectorAll('.homestay-checkbox:checked');
     homestayCheckboxes.forEach((checkbox) => {
@@ -181,7 +279,6 @@ function calculatePricing() {
             </div>
         `;
         
-        console.log(`Homestay: ${price} x ${malam} nights = ${subtotal}`);
     });
     
     // Calculate Culinary (price x days)
@@ -207,7 +304,6 @@ function calculatePricing() {
             </div>
         `;
         
-        console.log(`Culinary: ${price} x ${hari} days = ${subtotal}`);
     });
     
     // Calculate Boat (price x days)
@@ -233,7 +329,6 @@ function calculatePricing() {
             </div>
         `;
         
-        console.log(`Boat: ${price} x ${hari} days = ${subtotal}`);
     });
     
     // Calculate Kiosk (price x days)
@@ -259,15 +354,11 @@ function calculatePricing() {
             </div>
         `;
         
-        console.log(`Kiosk: ${price} x ${hari} days = ${subtotal}`);
     });
-    
-    console.log(`Total Modal: ${totalModal}`);
     
     // Update display
     document.getElementById('breakdown-total').textContent = 'RM ' + formatRinggit(totalModal);
     document.getElementById('display_harga_modal').value = formatRinggit(totalModal);
-    document.getElementById('harga_modal').value = totalModal;
     
     if (itemCount === 0) {
         document.getElementById('cost-breakdown').innerHTML = '<small class="text-muted">No items selected yet</small>';
@@ -277,7 +368,11 @@ function calculatePricing() {
     
     // Calculate Final Price and Profit
     calculateProfit(totalModal);
+
+    // Update recommended price based on new modal cost
+    calculateRecommendedPrice();
 }
+
 
 function calculateProfit(modal) {
     const hargaJual = parseFloat(document.getElementById('harga_jual').value) || 0;
@@ -295,21 +390,27 @@ function calculateProfit(modal) {
     const profit = hargaFinal - modal;
     const profitPersen = modal > 0 ? (profit / modal) * 100 : 0;
     
+    const pricingBuffer = modal > 0 ? modal * PACKAGE_BUFFER_PERCENTAGE : 0;
+    const netProfitAfterFee = profit - pricingBuffer;
+    
     // Display updates
     document.getElementById('display_harga_final').textContent = 'RM ' + formatRinggit(hargaFinal);
     
     // Profit Card Updates
     document.getElementById('display_final_price_profit').textContent = 'RM ' + formatRinggit(hargaFinal);
     document.getElementById('display_cost_price_profit').textContent = 'RM ' + formatRinggit(modal);
+    document.getElementById('display_stripe_fee').textContent = 'RM ' + formatRinggit(pricingBuffer);
     document.getElementById('display_profit').textContent = 'RM ' + formatRinggit(profit);
+    document.getElementById('display_net_profit_after_fee').textContent = 'RM ' + formatRinggit(netProfitAfterFee);
     document.getElementById('display_profit_persen').textContent = profitPersen.toFixed(2) + '%';
+
     
     const statusBadge = document.getElementById('profit-status-badge');
     const profitAlertCard = document.getElementById('profit-alert').closest('.card');
     
     if (hargaJual > 0) {
         if (profit < 0) {
-            statusBadge.className = 'badge bg-danger py-2 px-3';
+            statusBadge.className = 'badge bg-danger py-2 px-3 w-100 text-wrap lh-base';
             statusBadge.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Loss! Price too low';
             // change card border
             if(profitAlertCard) {
@@ -317,7 +418,7 @@ function calculateProfit(modal) {
                 profitAlertCard.classList.add('border-danger');
             }
         } else if (profit === 0) {
-            statusBadge.className = 'badge bg-warning text-dark py-2 px-3';
+            statusBadge.className = 'badge bg-warning text-dark py-2 px-3 w-100 text-wrap lh-base';
             statusBadge.innerHTML = '<i class="bi bi-dash-circle"></i> Break Even (No Profit)';
             if(profitAlertCard) {
                 profitAlertCard.classList.remove('border-danger', 'border-success', 'border-info');
@@ -325,22 +426,22 @@ function calculateProfit(modal) {
             }
         } else if (profitPersen < 20) {
             statusBadge.innerHTML = '<i class="bi bi-graph-up"></i> Low Margin - Consider increasing price';
-            statusBadge.className = 'badge bg-info py-2 px-3';
+            statusBadge.className = 'badge bg-info py-2 px-3 w-100 text-wrap lh-base';
             profitAlertCard.classList.remove('border-danger', 'border-success', 'border-warning');
             profitAlertCard.classList.add('border-info');
         } else if (profitPersen >= 20 && profitPersen < 50) {
             statusBadge.innerHTML = '<i class="bi bi-check-circle"></i> Good Profit Margin';
-            statusBadge.className = 'badge bg-success py-2 px-3';
+            statusBadge.className = 'badge bg-success py-2 px-3 w-100 text-wrap lh-base';
             profitAlertCard.classList.remove('border-danger', 'border-info', 'border-warning');
             profitAlertCard.classList.add('border-success');
         } else {
             statusBadge.innerHTML = '<i class="bi bi-star-fill"></i> Excellent Profit Margin!';
-            statusBadge.className = 'badge bg-primary py-2 px-3';
+            statusBadge.className = 'badge bg-primary py-2 px-3 w-100 text-wrap lh-base';
             profitAlertCard.classList.remove('border-danger', 'border-success', 'border-info', 'border-warning');
             profitAlertCard.classList.add('border-primary');
         }
     } else {
-        statusBadge.className = 'badge bg-secondary py-2 px-3';
+        statusBadge.className = 'badge bg-secondary py-2 px-3 w-100 text-wrap lh-base';
         statusBadge.innerHTML = '<i class="bi bi-info-circle"></i> Set selling price to see profit';
         if(profitAlertCard) {
             profitAlertCard.classList.remove('border-success', 'border-danger', 'border-info', 'border-warning');
@@ -462,11 +563,19 @@ function generateContent(target = 'all') {
 
 // Event listeners for real-time calculation
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, initializing...');
-    
     // Initialize counters
     ['destinasi', 'homestay', 'kuliner', 'boat', 'kiosk'].forEach(type => {
         updateCounter(type);
+    });
+
+    // Initialize: disable all quantity inputs on load (since all checkboxes start unchecked)
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        const card = cb.closest('.item-card');
+        if (card) {
+            card.querySelectorAll('input[type="number"]').forEach(inp => {
+                inp.disabled = !cb.checked;
+            });
+        }
     });
     
     // Initialize duration display
@@ -503,9 +612,5 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial calculation
     calculatePricing();
-    
-    console.log('Initialization complete');
 });
 </script>
-
-

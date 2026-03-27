@@ -3,6 +3,7 @@
   $canMasterData = $adminUser->canAccessMasterData();
   $canTransaction = $adminUser->canAccessTransaction();
   $canFinancial = $adminUser->canAccessFinancial();
+  $notificationsIndexPath = parse_url(route('admin.notifications.index'), PHP_URL_PATH) ?: route('admin.notifications.index');
 @endphp
 
 <!-- Sidebar Start -->
@@ -56,7 +57,7 @@
           </a>
         </li>
         <li class="sidebar-item {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}">
-          <a class="sidebar-link" href="{{ route('admin.notifications.index') }}" aria-expanded="false">
+          <a class="sidebar-link" href="{{ $notificationsIndexPath }}" aria-expanded="false">
             <span>
               <i class="ti ti-bell"></i>
             </span>
@@ -201,4 +202,3 @@
   </div>
 </aside>
 <!-- Sidebar End -->
-

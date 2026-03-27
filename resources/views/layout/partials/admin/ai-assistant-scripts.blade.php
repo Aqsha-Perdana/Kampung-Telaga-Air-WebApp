@@ -20,6 +20,30 @@
     const board = document.getElementById('admin-ai-chat-board');
     const newSessionButton = document.getElementById('admin-ai-widget-new-session');
     const promptButtons = widget.querySelectorAll('.admin-ai-prompt');
+    const root = document.documentElement;
+
+    function updateWidgetOffset() {
+      const fixedBars = Array.from(document.querySelectorAll('.body-wrapper .fixed-bottom'));
+      let bottomOffset = 0;
+
+      fixedBars.forEach(function (bar) {
+        const styles = window.getComputedStyle(bar);
+        const rect = bar.getBoundingClientRect();
+
+        if (styles.display === 'none' || styles.visibility === 'hidden' || rect.width === 0 || rect.height === 0) {
+          return;
+        }
+
+        const touchesBottomEdge = rect.bottom >= window.innerHeight - 8;
+        if (!touchesBottomEdge) {
+          return;
+        }
+
+        bottomOffset = Math.max(bottomOffset, Math.ceil(rect.height) + 16);
+      });
+
+      root.style.setProperty('--admin-ai-bottom-offset', bottomOffset > 0 ? bottomOffset + 'px' : '0px');
+    }
 
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -234,6 +258,12 @@
         input.focus();
       });
     }
+
+    window.addEventListener('resize', updateWidgetOffset, { passive: true });
+    window.addEventListener('orientationchange', updateWidgetOffset, { passive: true });
+    window.addEventListener('pageshow', updateWidgetOffset);
+    document.addEventListener('DOMContentLoaded', updateWidgetOffset, { once: true });
+    setTimeout(updateWidgetOffset, 0);
 
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && panel.classList.contains('is-open')) {

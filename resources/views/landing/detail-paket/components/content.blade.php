@@ -42,6 +42,12 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        @if($paket->foto_thumbnail)
+                        <img src="{{ asset('storage/' . $paket->foto_thumbnail) }}" 
+                             alt="{{ $paket->nama_paket }}" 
+                             class="img-fluid rounded mb-3 w-100" 
+                             style="max-height: 280px; object-fit: cover;">
+                        @endif
                         <p class="text-muted mb-3">{{ $paket->deskripsi ?? 'Enjoy an unforgettable travel experience with our complete package specially prepared for you.' }}</p>
                         <div class="row g-3">
                             @foreach([
@@ -278,7 +284,7 @@
                                 <ul class="small text-muted">
                                     <li>Minimum booking 3 days before departure</li>
                                     <li>Full payment is required during checkout</li>
-                                    <li>Payment confirmation is completed online via Stripe</li>
+                                    <li>Payment confirmation is completed online via Stripe or Xendit</li>
                                     <li>Approved refund requests are subject to a fixed 10% refund fee</li>
                                 </ul>
                             </div>
@@ -485,4 +491,3 @@
         </div>
     </div>
 </div>
-

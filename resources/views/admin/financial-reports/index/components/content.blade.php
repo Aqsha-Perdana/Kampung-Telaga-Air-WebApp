@@ -230,6 +230,9 @@
                             </tr>
                         </tbody>
                     </table>
+                    <div class="alert alert-light border small mt-2">
+                        Sales are presented on a gross basis. Payment gateway fees are shown separately under operating expenses.
+                    </div>
 
                     <!-- Operating Profit -->
                     <table class="table table-sm mt-3">
@@ -359,6 +362,7 @@
                                     <th class="text-center">Status</th>
                                     <th class="text-end">Revenue</th>
                                     <th class="text-end">Cost of Sales</th>
+                                    <th class="text-end">Gateway Fee</th>
                                     <th class="text-end">Other Income</th>
                                     <th class="text-end">Net Impact</th>
                                     <th class="text-center">Currency</th>
@@ -377,6 +381,7 @@
                                     </td>
                                     <td class="text-end">{{ format_ringgit_report($order['revenue']) }}</td>
                                     <td class="text-end text-danger">{{ format_ringgit_report($order['cost_of_sales']) }}</td>
+                                    <td class="text-end text-danger">{{ format_ringgit_report($order['gateway_fee'] ?? 0) }}</td>
                                     <td class="text-end text-info">{{ format_ringgit_report($order['other_income'] ?? 0) }}</td>
                                     <td class="text-end fw-semibold {{ ($order['net_profit_impact'] ?? 0) >= 0 ? 'text-success' : 'text-danger' }}">{{ format_ringgit_report($order['net_profit_impact'] ?? 0) }}</td>
                                     <td class="text-center">
@@ -406,15 +411,23 @@
                                 <td colspan="2"><strong>CASH FLOWS FROM OPERATING ACTIVITIES</strong></td>
                             </tr>
                             <tr class="table-light">
-                                <td class="ps-4"><strong>Cash Receipts from Customers</strong></td>
-                                <td class="text-end fw-bold">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['from_customers']) }}</td>
+                                <td class="ps-4"><strong>Gross Cash Receipts from Customers</strong></td>
+                                <td class="text-end fw-bold">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['from_customers_gross']) }}</td>
                             </tr>
                             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
                             <tr>
-                                <td class="ps-5 text-muted small">via {{ $method === 'stripe' ? 'Credit/Debit Card (Stripe)' : ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
-                                <td class="text-end text-muted small">{{ format_ringgit_report($data['amount']) }}</td>
+                                <td class="ps-5 text-muted small">via {{ payment_method_label($method) }} ({{ $data['count'] }} transactions)</td>
+                                <td class="text-end text-muted small">Gross {{ format_ringgit_report($data['gross_amount']) }}, Net {{ format_ringgit_report($data['net_amount']) }}</td>
                             </tr>
                             @endforeach
+                            <tr>
+                                <td class="ps-5">Less: Payment Gateway Fees Withheld</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['payment_gateway_fees_withheld']) }})</td>
+                            </tr>
+                            <tr class="fw-bold border-top">
+                                <td class="ps-4">Net Cash Receipts from Customers</td>
+                                <td class="text-end">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['from_customers']) }}</td>
+                            </tr>
                             
                             <tr class="table-light mt-3">
                                 <td class="ps-4"><strong>Cash Payments</strong></td>
@@ -705,5 +718,3 @@
         </div>
     </div>
 </div>
-
-

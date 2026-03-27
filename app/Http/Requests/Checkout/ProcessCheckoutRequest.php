@@ -13,13 +13,15 @@ class ProcessCheckoutRequest extends FormRequest
 
     public function rules(): array
     {
+        $paymentMethods = implode(',', array_keys(config('payment.methods', [])));
+
         return [
             'customer_name' => 'required|string|max:255',
             'customer_email' => 'required|email',
             'customer_phone' => 'required|string|max:20',
             'customer_address' => 'nullable|string',
             'display_currency' => 'nullable|in:MYR,USD,IDR,SGD,EUR,GBP,AUD,JPY,CNY',
-            'payment_method' => 'required|in:stripe',
+            'payment_method' => 'required|in:' . $paymentMethods,
         ];
     }
 }

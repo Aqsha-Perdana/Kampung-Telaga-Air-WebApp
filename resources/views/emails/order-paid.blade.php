@@ -20,7 +20,7 @@
 
             <div style="background:#f8fbfd;border:1px solid #e5edf5;border-radius:16px;padding:18px;margin-bottom:20px;">
                 <p style="margin:0 0 8px;"><strong>Order ID:</strong> {{ $order->id_order }}</p>
-                <p style="margin:0 0 8px;"><strong>Payment method:</strong> Credit/Debit Card (Stripe)</p>
+                <p style="margin:0 0 8px;"><strong>Payment method:</strong> {{ payment_method_label($order->payment_method) }}</p>
                 <p style="margin:0 0 8px;"><strong>Total paid:</strong> RM {{ number_format((float) $order->base_amount, 2) }}</p>
                 <p style="margin:0;"><strong>Redeem code:</strong> {{ $order->redeem_code ?: 'Will appear once payment is confirmed' }}</p>
             </div>

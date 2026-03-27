@@ -134,7 +134,7 @@
         <div class="row g-4">
             @foreach($destinasis as $destinasi)
             <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="{{ $loop->index * 100 }}">
-                @if($destinasi->footage360->count() > 0)
+                @if(($destinasi->footage360_count ?? 0) > 0)
                     {{-- Link ke footage 360 pertama jika ada --}}
                     <a href="{{ route('view360.show', $destinasi->footage360->first()->id_footage360) }}" class="destination-link">
                 @else
@@ -143,15 +143,15 @@
                 @endif
                     <div class="destination-card">
                         @if($destinasi->fotos->count() > 0)
-                            <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy">
+                            <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
                             <small class="d-none">{{ asset('storage/'.$destinasi->fotos->first()->foto) }}</small>
                             <!-- DEBUG: {{ $destinasi->fotos->first()->foto }} -->
                         @else
-                            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600" alt="{{ $destinasi->nama }}" loading="lazy">
+                            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
                         @endif
                         
                         {{-- Badge 360 jika ada footage --}}
-                        @if($destinasi->footage360->count() > 0)
+                        @if(($destinasi->footage360_count ?? 0) > 0)
                             <div class="badge-360">
                                 <i class="fas fa-street-view"></i> 360&deg;
                             </div>
@@ -159,10 +159,10 @@
 
                         <div class="card-body">
                             <h5 class="card-title">{{ $destinasi->nama }}</h5>
-                            @if($destinasi->footage360->count() > 0)
+                            @if(($destinasi->footage360_count ?? 0) > 0)
                                 <p class="small text-muted">
                                     <i class="fas fa-images"></i> 
-                                    {{ $destinasi->footage360->count() }} locations available
+                                    {{ $destinasi->footage360_count }} locations available
                                 </p>
                             @endif
                         </div>
@@ -200,9 +200,9 @@
                 <a href="{{ route('landing.detail-destinasi', $destinasi->id_destinasi) }}" class="destination-link">
                     <div class="destination-card">
                         @if($destinasi->fotos->count() > 0)
-                            <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy">
+                            <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
                         @else
-                            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600" alt="{{ $destinasi->nama }}" loading="lazy">
+                            <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
                         @endif
 
             <div class="card-body">
@@ -289,15 +289,15 @@
                         </h6>
                         <ul class="feature-list">
                             <!-- 1. Tourist Destinations -->
-                            <li class="{{ $paket->destinasis->count() > 0 ? '' : 'empty-feature' }}">
+                            <li class="{{ ($paket->destinasis_count ?? 0) > 0 ? '' : 'empty-feature' }}">
                                 <i class="bi bi-geo-alt-fill text-primary"></i>
                                 <div>
-                                    @if($paket->destinasis->count() > 0)
-                                        <strong>{{ $paket->destinasis->count() }} Tourist Destinations</strong>
+                                    @if(($paket->destinasis_count ?? 0) > 0)
+                                        <strong>{{ $paket->destinasis_count }} Tourist Destinations</strong>
                                         <small class="d-block">
                                             {{ $paket->destinasis->pluck('nama')->take(2)->join(', ') }}
-                                            @if($paket->destinasis->count() > 2)
-                                                <span class="text-primary">+{{ $paket->destinasis->count() - 2 }} more</span>
+                                            @if(($paket->destinasis_count ?? 0) > 2)
+                                                <span class="text-primary">+{{ $paket->destinasis_count - 2 }} more</span>
                                             @endif
                                         </small>
                                     @else
@@ -308,11 +308,11 @@
                             </li>
                             
                             <!-- 2. Homestay -->
-                            <li class="{{ $paket->homestays->count() > 0 ? '' : 'empty-feature' }}">
+                            <li class="{{ ($paket->homestays_count ?? 0) > 0 ? '' : 'empty-feature' }}">
                                 <i class="bi bi-house-heart-fill text-success"></i>
                                 <div>
-                                    @if($paket->homestays->count() > 0)
-                                        <strong>{{ $paket->homestays->count() }} Homestay</strong>
+                                    @if(($paket->homestays_count ?? 0) > 0)
+                                        <strong>{{ $paket->homestays_count }} Homestay</strong>
                                         <small class="d-block">
                                             @php
                                                 $totalMalam = $paket->homestays->sum('pivot.jumlah_malam');
@@ -327,11 +327,11 @@
                             </li>
                             
                             <!-- 3. Culinary -->
-                            <li class="{{ $paket->paketCulinaries->count() > 0 ? '' : 'empty-feature' }}">
+                            <li class="{{ ($paket->paket_culinaries_count ?? 0) > 0 ? '' : 'empty-feature' }}">
                                 <i class="bi bi-cup-hot-fill text-warning"></i>
                                 <div>
-                                    @if($paket->paketCulinaries->count() > 0)
-                                        <strong>{{ $paket->paketCulinaries->count() }} Culinary Package</strong>
+                                    @if(($paket->paket_culinaries_count ?? 0) > 0)
+                                        <strong>{{ $paket->paket_culinaries_count }} Culinary Package</strong>
                                         <small class="d-block">Local specialties</small>
                                     @else
                                         <strong>0 Culinary Package</strong>
@@ -341,11 +341,11 @@
                             </li>
                             
                             <!-- 4. Boat Transportation -->
-                            <li class="{{ $paket->boats->count() > 0 ? '' : 'empty-feature' }}">
+                            <li class="{{ ($paket->boats_count ?? 0) > 0 ? '' : 'empty-feature' }}">
                                 <i class="bi bi-water text-info"></i>
                                 <div>
-                                    @if($paket->boats->count() > 0)
-                                        <strong>{{ $paket->boats->count() }} Boat Transportation</strong>
+                                    @if(($paket->boats_count ?? 0) > 0)
+                                        <strong>{{ $paket->boats_count }} Boat Transportation</strong>
                                         <small class="d-block">Sea Journey</small>
                                     @else
                                         <strong>0 Boat Transportation</strong>
@@ -355,11 +355,11 @@
                             </li>
 
                             <!-- 5. Kiosk -->
-                            <li class="{{ $paket->kiosks->count() > 0 ? '' : 'empty-feature' }}">
+                            <li class="{{ ($paket->kiosks_count ?? 0) > 0 ? '' : 'empty-feature' }}">
                                 <i class="bi bi-shop text-danger"></i>
                                 <div>
-                                    @if($paket->kiosks->count() > 0)
-                                        <strong>{{ $paket->kiosks->count() }} Kiosk</strong>
+                                    @if(($paket->kiosks_count ?? 0) > 0)
+                                        <strong>{{ $paket->kiosks_count }} Kiosk</strong>
                                         <small class="d-block">Souvenirs and gifts</small>
                                     @else
                                         <strong>0 Kiosk</strong>
@@ -375,7 +375,7 @@
                         <h6 class="feature-title">
                             <i class="bi bi-calendar-check text-success"></i> Travel Schedule
                         </h6>
-                        @if($paket->itineraries->count() > 0)
+                        @if(($paket->itineraries_count ?? 0) > 0)
                             <div class="itinerary-items">
                                 @foreach($paket->itineraries->take(3) as $itinerary)
                                     <div class="itinerary-item-preview">
@@ -383,8 +383,8 @@
                                         <small>{{ Str::limit($itinerary->judul_hari, 30) }}</small>
                                     </div>
                                 @endforeach
-                                @if($paket->itineraries->count() > 3)
-                                    <small class="text-primary">+{{ $paket->itineraries->count() - 3 }} other activities</small>
+                                @if(($paket->itineraries_count ?? 0) > 3)
+                                    <small class="text-primary">+{{ $paket->itineraries_count - 3 }} other activities</small>
                                 @endif
                             </div>
                         @else
@@ -443,4 +443,3 @@
 <div class="elementor-element elementor-element-75a2ce94 elementor-widget elementor-widget-image animated togo-fade-in-up" data-id="75a2ce94" data-element_type="widget" data-settings="{&quot;_animation&quot;:&quot;togo-fade-in-up&quot;}" data-widget_type="image.default">
 	<img fetchpriority="low" decoding="async" loading="lazy" width="2160" height="350" src="https://visitkampungtelagaair.com/wp-content/uploads/2025/04/svgexport-1-1-1.png" class="attachment-full size-full wp-image-3469" alt="" srcset="https://visitkampungtelagaair.com/wp-content/uploads/2025/04/svgexport-1-1-1.png 2160w, https://visitkampungtelagaair.com/wp-content/uploads/2025/04/svgexport-1-1-1-600x126.png 600w" sizes="(max-width: 2160px) 100vw, 2160px">
 </div>
-

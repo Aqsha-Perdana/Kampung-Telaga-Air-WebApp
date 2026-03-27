@@ -32,8 +32,13 @@ class Order extends Model
         'display_exchange_rate',  // Rate saat checkout (nullable)
         
         'payment_method',
+        'payment_channel',
         'payment_intent_id',
         'payment_proof',
+        'gateway_fee_amount',
+        'gateway_fee_currency',
+        'gateway_net_amount',
+        'gateway_fee_source',
         'status',
         'paid_at',
         'redeem_code',
@@ -58,6 +63,8 @@ class Order extends Model
         'total_amount' => 'decimal:2',
         'display_amount' => 'decimal:2',
         'display_exchange_rate' => 'decimal:6',
+        'gateway_fee_amount' => 'decimal:2',
+        'gateway_net_amount' => 'decimal:2',
     ];
 
     // Relationships

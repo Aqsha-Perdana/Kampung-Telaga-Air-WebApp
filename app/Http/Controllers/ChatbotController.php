@@ -225,7 +225,7 @@ class ChatbotController extends Controller
                 '1. Login akun wisatawan.',
                 '2. Pilih paket lalu tambah ke keranjang di /cart.',
                 '3. Buka /checkout, isi data pemesan.',
-                '4. Lanjutkan pembayaran dengan kartu melalui Stripe.',
+                '4. Pilih metode pembayaran: Stripe atau Xendit.',
                 '5. Lihat status pesanan di /orders.',
             ]);
         }
@@ -235,7 +235,7 @@ class ChatbotController extends Controller
         }
 
         if ($this->containsAny($normalized, ['metode bayar', 'metode pembayaran', 'bayar apa aja', 'payment method'])) {
-            return 'Metode pembayaran yang tersedia saat ini adalah kartu kredit/debit melalui Stripe.';
+            return 'Metode pembayaran yang tersedia saat ini adalah Stripe dan Xendit.';
         }
 
         if ($this->containsAny($normalized, ['refund', 'pengembalian dana'])) {

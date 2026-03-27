@@ -177,7 +177,7 @@
                                     <form action="{{ route('kiosks.destroy', $kiosk) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this kiosk {{ $kiosk->nama }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('kiosks.destroy', $kiosk) }}', itemLabel: @js($kiosk->nama), title: 'Delete Kiosk?', html: 'This will permanently delete <strong>' + @js($kiosk->nama) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -311,7 +311,7 @@
                                 <form action="{{ route('kiosks.destroy', $kiosk) }}" 
                                       method="POST" 
                                       class="d-inline w-50"
-                                      onsubmit="return confirm('Are you sure you want to delete this kiosk {{ $kiosk->nama }}?')">
+                                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('kiosks.destroy', $kiosk) }}', itemLabel: @js($kiosk->nama), title: 'Delete Kiosk?', html: 'This will permanently delete <strong>' + @js($kiosk->nama) + '</strong>. This action cannot be undone.' });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">

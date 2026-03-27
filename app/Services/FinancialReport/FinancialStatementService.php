@@ -28,6 +28,7 @@ class FinancialStatementService
             ->sum(fn ($order) => (float) ($order->refund_fee ?? 0));
 
         $revenue = $operatingOrders->sum(fn ($order) => (float) $order->base_amount);
+        $paymentGatewayFees = $orders->sum(fn ($order) => (float) ($order->gateway_fee_amount ?? 0));
 
         $costOfSales = 0.0;
         $revenueBreakdown = [];
@@ -37,12 +38,14 @@ class FinancialStatementService
                 $itemRevenue = 0.0;
                 $itemCost = 0.0;
                 $itemOtherIncome = (float) ($order->refund_fee ?? 0);
+                $itemGatewayFee = (float) ($order->gateway_fee_amount ?? 0);
                 $itemBreakdown = [];
             } else {
                 $orderCost = $this->costCalculator->calculateOrderCost((string) $order->id_order);
                 $itemRevenue = (float) $order->base_amount;
                 $itemCost = (float) $orderCost['total'];
                 $itemOtherIncome = 0.0;
+                $itemGatewayFee = (float) ($order->gateway_fee_amount ?? 0);
                 $itemBreakdown = $orderCost['breakdown'];
             }
 
@@ -61,8 +64,11 @@ class FinancialStatementService
                 ],
                 'cost_of_sales' => $itemCost,
                 'gross_profit' => $itemRevenue - $itemCost,
+                'gateway_fee' => $itemGatewayFee,
+                'gateway_net_amount' => (float) ($order->gateway_net_amount ?? ($itemRevenue - $itemGatewayFee)),
+                'payment_channel' => $order->payment_channel,
                 'other_income' => $itemOtherIncome,
-                'net_profit_impact' => ($itemRevenue - $itemCost) + $itemOtherIncome,
+                'net_profit_impact' => ($itemRevenue - $itemCost - $itemGatewayFee) + $itemOtherIncome,
                 'cost_breakdown' => $itemBreakdown,
             ];
         }
@@ -80,7 +86,12 @@ class FinancialStatementService
             ];
         })->toArray();
 
-        $totalOperatingExpenses = (float) $operatingExpenses->sum('jumlah');
+        $expensesByNature['Payment Gateway Fees'] = [
+            'count' => $orders->filter(fn ($order) => (float) ($order->gateway_fee_amount ?? 0) > 0)->count(),
+            'amount' => $paymentGatewayFees,
+        ];
+
+        $totalOperatingExpenses = (float) $operatingExpenses->sum('jumlah') + $paymentGatewayFees;
         $operatingProfit = $grossProfit - $totalOperatingExpenses;
 
         $otherIncome = $refundFeeIncome;
@@ -119,6 +130,8 @@ class FinancialStatementService
             ],
             'operating_expenses' => [
                 'by_nature' => $expensesByNature,
+                'manual_operating_expenses' => (float) $operatingExpenses->sum('jumlah'),
+                'payment_gateway_fees' => $paymentGatewayFees,
                 'total_operating_expenses' => $totalOperatingExpenses,
             ],
             'operating_profit' => [
@@ -147,6 +160,7 @@ class FinancialStatementService
             'transactions' => [
                 'total_orders' => $orders->count(),
                 'total_customers' => $orders->unique('customer_email')->count(),
+                'total_gateway_fees' => $paymentGatewayFees,
             ],
             'revenue_breakdown' => $revenueBreakdown,
         ];
@@ -157,10 +171,20 @@ class FinancialStatementService
         [$startAt, $endAt] = $this->normalizeDateTimeRange($startDate, $endDate);
         [$startDateOnly, $endDateOnly] = $this->normalizeDateRange($startDate, $endDate);
 
-        $cashFromCustomers = (float) DB::table('orders')
+        $cashFromCustomersGross = (float) DB::table('orders')
             ->whereIn('status', ['paid', 'confirmed', 'completed', 'refunded'])
             ->whereBetween('paid_at', [$startAt, $endAt])
             ->sum('base_amount');
+
+        $gatewayFeesWithheld = (float) DB::table('orders')
+            ->whereIn('status', ['paid', 'confirmed', 'completed', 'refunded'])
+            ->whereBetween('paid_at', [$startAt, $endAt])
+            ->sum(DB::raw('COALESCE(gateway_fee_amount, 0)'));
+
+        $cashFromCustomersNet = (float) DB::table('orders')
+            ->whereIn('status', ['paid', 'confirmed', 'completed', 'refunded'])
+            ->whereBetween('paid_at', [$startAt, $endAt])
+            ->sum(DB::raw('COALESCE(gateway_net_amount, base_amount - COALESCE(gateway_fee_amount, 0))'));
 
         $paymentMethodBreakdown = DB::table('orders')
             ->whereIn('status', ['paid', 'confirmed', 'completed', 'refunded'])
@@ -168,7 +192,9 @@ class FinancialStatementService
             ->select(
                 'payment_method',
                 DB::raw('COUNT(*) as transaction_count'),
-                DB::raw('SUM(base_amount) as total_amount')
+                DB::raw('SUM(base_amount) as gross_amount'),
+                DB::raw('SUM(COALESCE(gateway_fee_amount, 0)) as fee_amount'),
+                DB::raw('SUM(COALESCE(gateway_net_amount, base_amount - COALESCE(gateway_fee_amount, 0))) as net_amount')
             )
             ->groupBy('payment_method')
             ->get()
@@ -176,7 +202,9 @@ class FinancialStatementService
                 return [
                     $item->payment_method => [
                         'count' => $item->transaction_count,
-                        'amount' => $item->total_amount,
+                        'gross_amount' => (float) $item->gross_amount,
+                        'fee_amount' => (float) $item->fee_amount,
+                        'net_amount' => (float) $item->net_amount,
                     ],
                 ];
             })
@@ -233,7 +261,7 @@ class FinancialStatementService
             ->pluck('total', 'kategori')
             ->toArray();
 
-        $netCashFromOperating = $cashFromCustomers
+        $netCashFromOperating = $cashFromCustomersNet
             - $refundsPaidToCustomers
             - $cashToSuppliers
             - $cashForOperatingExpenses;
@@ -259,7 +287,9 @@ class FinancialStatementService
             ],
             'operating_activities' => [
                 'cash_receipts' => [
-                    'from_customers' => $cashFromCustomers,
+                    'from_customers_gross' => $cashFromCustomersGross,
+                    'payment_gateway_fees_withheld' => $gatewayFeesWithheld,
+                    'from_customers' => $cashFromCustomersNet,
                     'by_payment_method' => $paymentMethodBreakdown,
                 ],
                 'cash_payments' => [
@@ -304,7 +334,7 @@ class FinancialStatementService
             'statistics' => [
                 'total_transactions' => $receiptTransactionCount,
                 'average_transaction_value' => $receiptTransactionCount > 0
-                    ? $cashFromCustomers / $receiptTransactionCount
+                    ? $cashFromCustomersNet / $receiptTransactionCount
                     : 0,
             ],
         ];

@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="{{ asset('assets/css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/landing-layout.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/landing-page-extensions.css') }}">
 </head>
 <body class="visitor-app">
     @include('landing.partials.navbar')

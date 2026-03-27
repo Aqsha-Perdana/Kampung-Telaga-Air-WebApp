@@ -95,6 +95,7 @@ class ProfitLossSheet implements FromCollection, WithTitle, WithHeadings, WithSt
             ['Gross Profit Margin %', number_format((float) ($this->profitLoss['gross_profit']['margin_percentage'] ?? 0), 2) . '%'],
             ['', ''],
             ['OPERATING EXPENSES', ''],
+            ['  Payment Gateway Fees', '(' . number_format((float) ($this->profitLoss['operating_expenses']['payment_gateway_fees'] ?? 0), 2) . ')'],
             ['  Total Operating Expenses', '(' . number_format($operatingExpenses, 2) . ')'],
             ['', ''],
             ['OPERATING PROFIT (EBIT)', number_format($operatingProfit, 2)],
@@ -126,11 +127,11 @@ class ProfitLossSheet implements FromCollection, WithTitle, WithHeadings, WithSt
             12 => ['font' => ['bold' => true]],
             19 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'D4EDDA']]],
             22 => ['font' => ['bold' => true]],
-            25 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'CCE5FF']]],
-            28 => ['font' => ['bold' => true]],
-            34 => ['font' => ['bold' => true]],
-            36 => ['font' => ['bold' => true]],
-            38 => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'C3E6CB']]],
+            26 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'CCE5FF']]],
+            29 => ['font' => ['bold' => true]],
+            35 => ['font' => ['bold' => true]],
+            37 => ['font' => ['bold' => true]],
+            39 => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'C3E6CB']]],
         ];
     }
 }
@@ -163,6 +164,8 @@ class CashFlowSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
 
     public function collection()
     {
+        $grossReceipts = (float) ($this->cashFlow['operating_activities']['cash_receipts']['from_customers_gross'] ?? 0);
+        $gatewayFeesWithheld = (float) ($this->cashFlow['operating_activities']['cash_receipts']['payment_gateway_fees_withheld'] ?? 0);
         $receipts = (float) ($this->cashFlow['operating_activities']['cash_receipts']['from_customers'] ?? 0);
         $paymentsSuppliers = (float) ($this->cashFlow['operating_activities']['cash_payments']['to_suppliers'] ?? 0);
         $paymentsRefund = (float) ($this->cashFlow['operating_activities']['cash_payments']['refunds_to_customers'] ?? 0);
@@ -170,7 +173,9 @@ class CashFlowSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
 
         return collect([
             ['CASH FLOWS FROM OPERATING ACTIVITIES', ''],
-            ['  Cash Receipts from Customers', number_format($receipts, 2)],
+            ['  Gross Cash Receipts from Customers', number_format($grossReceipts, 2)],
+            ['  Less: Payment Gateway Fees Withheld', '(' . number_format($gatewayFeesWithheld, 2) . ')'],
+            ['  Net Cash Receipts from Customers', number_format($receipts, 2)],
             ['  Cash Payments to Suppliers', '(' . number_format($paymentsSuppliers, 2) . ')'],
             ['  Refunds Paid to Customers', '(' . number_format($paymentsRefund, 2) . ')'],
             ['  Cash Payments for Operating Expenses', '(' . number_format($paymentsExpenses, 2) . ')'],
@@ -200,13 +205,13 @@ class CashFlowSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
             3 => ['font' => ['italic' => true]],
             6 => ['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'E7E6E6']]],
             7 => ['font' => ['bold' => true]],
-            12 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'D4EDDA']]],
-            14 => ['font' => ['bold' => true]],
-            17 => ['font' => ['bold' => true]],
-            19 => ['font' => ['bold' => true]],
-            22 => ['font' => ['bold' => true]],
-            24 => ['font' => ['bold' => true, 'size' => 11]],
-            26 => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'C3E6CB']]],
+            13 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'D4EDDA']]],
+            15 => ['font' => ['bold' => true]],
+            18 => ['font' => ['bold' => true]],
+            20 => ['font' => ['bold' => true]],
+            23 => ['font' => ['bold' => true]],
+            25 => ['font' => ['bold' => true, 'size' => 11]],
+            27 => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'C3E6CB']]],
         ];
     }
 }
@@ -235,7 +240,7 @@ class RevenueBreakdownSheet implements FromCollection, WithTitle, WithHeadings, 
             ['DETAILED REVENUE BREAKDOWN'],
             ['For the period from ' . $this->startDate->format('d F Y') . ' to ' . $this->endDate->format('d F Y')],
             [],
-            ['Order ID', 'Customer', 'Date', 'Revenue (MYR)', 'Cost of Sales (MYR)', 'Gross Profit (MYR)', 'Display Currency', 'Display Amount'],
+            ['Order ID', 'Customer', 'Date', 'Revenue (MYR)', 'Cost of Sales (MYR)', 'Gateway Fee (MYR)', 'Net Impact (MYR)', 'Display Currency', 'Display Amount'],
         ];
     }
 
@@ -254,7 +259,8 @@ class RevenueBreakdownSheet implements FromCollection, WithTitle, WithHeadings, 
                     $date,
                     number_format((float) ($order['revenue'] ?? 0), 2),
                     number_format((float) ($order['cost_of_sales'] ?? 0), 2),
-                    number_format((float) ($order['gross_profit'] ?? 0), 2),
+                    number_format((float) ($order['gateway_fee'] ?? 0), 2),
+                    number_format((float) ($order['net_profit_impact'] ?? 0), 2),
                     $displayCurrency ?: 'MYR',
                     number_format((float) $displayAmount, 2),
                 ];

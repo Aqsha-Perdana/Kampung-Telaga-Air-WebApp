@@ -36,6 +36,40 @@
     top: 0;
     z-index: 1200;
     background-color: #fff;
+    border-bottom: 1px solid #edf2f7;
+  }
+
+  .app-header .navbar {
+    width: 100%;
+    min-height: 72px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .app-header .navbar > .navbar-nav:first-child {
+    flex: 0 0 auto;
+  }
+
+  .app-header .navbar-collapse {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    margin-left: auto;
+  }
+
+  .app-header .navbar-right {
+    width: auto !important;
+  }
+
+  .app-header .navbar-nav.flex-row.ms-auto {
+    width: auto;
+    justify-content: flex-end;
+    gap: 8px;
   }
 
   .admin-notif-count {
@@ -100,8 +134,9 @@
   .admin-ai-widget {
     position: fixed;
     right: 24px;
-    bottom: 24px;
+    bottom: calc(24px + var(--admin-ai-bottom-offset, 0px));
     z-index: 1300;
+    transition: bottom 0.2s ease, right 0.2s ease;
   }
 
   .admin-ai-fab {
@@ -364,6 +399,7 @@
     padding-bottom: 2rem;
     margin-right: -10px;
     padding-right: 10px;
+    scroll-behavior: smooth;
   }
 
   .sidebar-nav::-webkit-scrollbar {
@@ -389,6 +425,10 @@
 
   .sidebar-item.active > .sidebar-link {
     transform: translateX(2px);
+    background: linear-gradient(135deg, rgba(72, 126, 255, 0.14) 0%, rgba(99, 102, 241, 0.18) 100%);
+    color: #2d5fff;
+    box-shadow: inset 0 0 0 1px rgba(72, 126, 255, 0.14);
+    border-radius: 14px;
   }
 
   .sidebar-item.is-pending > .sidebar-link {
@@ -401,7 +441,11 @@
     transition: opacity 0.2s ease, transform 0.2s ease;
   }
 
-  .page-wrapper.is-leaving .body-wrapper,
+  .body-wrapper {
+    padding-bottom: 8rem;
+    scroll-padding-bottom: 8rem;
+  }
+
   .page-wrapper.is-leaving .container-fluid {
     opacity: 0.65;
     transform: translateY(3px);
@@ -502,7 +546,7 @@
   @media (max-width: 767px) {
     .admin-ai-widget {
       right: 14px;
-      bottom: 14px;
+      bottom: calc(14px + var(--admin-ai-bottom-offset, 0px));
       left: 14px;
     }
 

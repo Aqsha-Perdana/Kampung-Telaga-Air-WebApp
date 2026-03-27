@@ -2,6 +2,19 @@
 
 @section('content')
 @php
+    $toInternalUrl = function (string $url): string {
+        $path = parse_url($url, PHP_URL_PATH);
+        $query = parse_url($url, PHP_URL_QUERY);
+
+        if (!is_string($path) || $path === '') {
+            return $url;
+        }
+
+        return is_string($query) && $query !== '' ? $path . '?' . $query : $path;
+    };
+
+    $notificationsIndexUrl = $toInternalUrl(route('admin.notifications.index'));
+    $notificationMarkReadUrl = $toInternalUrl(route('admin.notifications.mark-read'));
     $badgeMeta = [
         'new_order' => ['label' => 'New Booking', 'class' => 'primary', 'icon' => 'shopping-cart'],
         'payment_paid' => ['label' => 'Payment Confirmed', 'class' => 'success', 'icon' => 'credit-card'],
@@ -44,7 +57,7 @@
 
 <div class="card notif-filter-card border-0 shadow-sm mb-3">
     <div class="card-body py-3">
-        <form method="GET" action="{{ route('admin.notifications.index') }}" class="row g-2 align-items-end">
+        <form method="GET" action="{{ $notificationsIndexUrl }}" class="row g-2 align-items-end">
             <div class="col-xl-3 col-lg-4 col-md-6">
                 <label class="form-label small text-muted mb-1">Notification type</label>
                 <select name="type" class="form-select form-select-sm">
@@ -77,7 +90,7 @@
             </div>
             @if($hasActiveFilters)
                 <div class="col-xl-auto col-lg-auto col-md-auto">
-                    <a href="{{ route('admin.notifications.index') }}" class="btn btn-light border btn-sm px-3">
+                    <a href="{{ $notificationsIndexUrl }}" class="btn btn-light border btn-sm px-3">
                         <i class="ti ti-refresh me-1"></i> Reset
                     </a>
                 </div>
@@ -87,10 +100,10 @@
         <div class="notif-quick-filters mt-3">
             <span class="small text-muted">Quick range</span>
             <div class="d-flex flex-wrap gap-2">
-                <a href="{{ route('admin.notifications.index', array_filter(['date_from' => now()->toDateString(), 'date_to' => now()->toDateString(), 'type' => $selectedType, 'read_status' => $selectedReadStatus])) }}" class="btn btn-light border btn-sm">Today</a>
-                <a href="{{ route('admin.notifications.index', array_filter(['date_from' => now()->subDays(6)->toDateString(), 'date_to' => now()->toDateString(), 'type' => $selectedType, 'read_status' => $selectedReadStatus])) }}" class="btn btn-light border btn-sm">Last 7 days</a>
-                <a href="{{ route('admin.notifications.index', array_filter(['date_from' => now()->subDays(29)->toDateString(), 'date_to' => now()->toDateString(), 'type' => $selectedType, 'read_status' => $selectedReadStatus])) }}" class="btn btn-light border btn-sm">Last 30 days</a>
-                <a href="{{ route('admin.notifications.index', array_filter(['read_status' => 'unread', 'type' => $selectedType, 'date_from' => $selectedDateFrom, 'date_to' => $selectedDateTo])) }}" class="btn btn-light border btn-sm">Unread only</a>
+                <a href="{{ $toInternalUrl(route('admin.notifications.index', array_filter(['date_from' => now()->toDateString(), 'date_to' => now()->toDateString(), 'type' => $selectedType, 'read_status' => $selectedReadStatus]))) }}" class="btn btn-light border btn-sm">Today</a>
+                <a href="{{ $toInternalUrl(route('admin.notifications.index', array_filter(['date_from' => now()->subDays(6)->toDateString(), 'date_to' => now()->toDateString(), 'type' => $selectedType, 'read_status' => $selectedReadStatus]))) }}" class="btn btn-light border btn-sm">Last 7 days</a>
+                <a href="{{ $toInternalUrl(route('admin.notifications.index', array_filter(['date_from' => now()->subDays(29)->toDateString(), 'date_to' => now()->toDateString(), 'type' => $selectedType, 'read_status' => $selectedReadStatus]))) }}" class="btn btn-light border btn-sm">Last 30 days</a>
+                <a href="{{ $toInternalUrl(route('admin.notifications.index', array_filter(['read_status' => 'unread', 'type' => $selectedType, 'date_from' => $selectedDateFrom, 'date_to' => $selectedDateTo]))) }}" class="btn btn-light border btn-sm">Unread only</a>
             </div>
         </div>
     </div>
@@ -181,9 +194,13 @@
     </div>
 </div>
 
-<div class="mt-3">
-    {{ $notifications->links() }}
-</div>
+@if($notifications->hasPages())
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body py-3">
+            {{ $notifications->onEachSide(1)->links('pagination::bootstrap-5') }}
+        </div>
+    </div>
+@endif
 @endsection
 
 @section('styles')
@@ -417,7 +434,7 @@
       button.disabled = true;
 
       try {
-        const response = await fetch(@json(route('admin.notifications.mark-read')), {
+        const response = await fetch(@json($notificationMarkReadUrl), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

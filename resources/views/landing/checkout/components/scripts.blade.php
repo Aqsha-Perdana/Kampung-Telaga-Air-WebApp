@@ -6,31 +6,37 @@ console.log('=== CHECKOUT SCRIPT LOADED (Display Currency Only) ===');
 // Configuration
 const BASE_TOTAL_MYR = parseFloat(document.getElementById('base-total').value);
 console.log('Base Total (MYR):', BASE_TOTAL_MYR);
+let currentPaymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value || '{{ config("payment.default", "stripe") }}';
+const stripeKey = '{{ config("services.stripe.key") }}';
 
 // Initialize Stripe
-const stripe = Stripe('{{ config("services.stripe.key") }}');
-const elements = stripe.elements();
-const cardElement = elements.create('card', {
-    style: {
-        base: {
-            fontSize: '16px',
-            color: '#32325d',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            '::placeholder': { color: '#aab7c4' }
-        },
-        invalid: { color: '#dc3545', iconColor: '#dc3545' }
-    }
-});
-cardElement.mount('#card-element');
+const stripe = stripeKey ? Stripe(stripeKey) : null;
+let cardElement = null;
 
-cardElement.on('change', function(event) {
-    const displayError = document.getElementById('card-errors');
-    if (event.error) {
-        displayError.textContent = event.error.message;
-    } else {
-        displayError.textContent = '';
-    }
-});
+if (stripe) {
+    const elements = stripe.elements();
+    cardElement = elements.create('card', {
+        style: {
+            base: {
+                fontSize: '16px',
+                color: '#32325d',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                '::placeholder': { color: '#aab7c4' }
+            },
+            invalid: { color: '#dc3545', iconColor: '#dc3545' }
+        }
+    });
+    cardElement.mount('#card-element');
+
+    cardElement.on('change', function(event) {
+        const displayError = document.getElementById('card-errors');
+        if (event.error) {
+            displayError.textContent = event.error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
+}
 
 // ============================================
 // DISPLAY CURRENCY CONVERSION (UI ONLY)
@@ -137,6 +143,29 @@ document.getElementById('display_currency').addEventListener('change', function(
     updateDisplayPrices(this.value);
 });
 
+function togglePaymentSections(paymentMethod) {
+    currentPaymentMethod = paymentMethod;
+
+    const stripeSection = document.getElementById('stripe-section');
+    const xenditSection = document.getElementById('xendit-section');
+    const cardErrors = document.getElementById('card-errors');
+
+    stripeSection.classList.toggle('d-none', paymentMethod !== 'stripe');
+    xenditSection.classList.toggle('d-none', paymentMethod !== 'xendit');
+
+    if (paymentMethod !== 'stripe') {
+        cardErrors.textContent = '';
+    }
+}
+
+document.querySelectorAll('.payment-method-input').forEach((input) => {
+    input.addEventListener('change', function() {
+        if (this.checked) {
+            togglePaymentSections(this.value);
+        }
+    });
+});
+
 // ============================================
 // WEBHOOK WAITING FUNCTIONS
 // ============================================
@@ -226,7 +255,7 @@ document.getElementById('payment-form').addEventListener('submit', async functio
         customer_phone: document.getElementById('customer_phone').value,
         customer_address: document.getElementById('customer_address').value,
         display_currency: currentDisplayCurrency,
-        payment_method: 'stripe'
+        payment_method: currentPaymentMethod
     };
 
     console.log('Submitting payment (MYR):', formData);
@@ -247,25 +276,42 @@ document.getElementById('payment-form').addEventListener('submit', async functio
 
         console.log('Order created:', result.order_id);
 
-        // Step 2: Confirm payment with Stripe
-        const {error, paymentIntent} = await stripe.confirmCardPayment(result.client_secret, {
-            payment_method: {
-                card: cardElement,
-                billing_details: {
-                    name: formData.customer_name,
-                    email: formData.customer_email
-                }
+        if (formData.payment_method === 'stripe') {
+            if (!stripe || !cardElement) {
+                throw new Error('Stripe is not configured for this environment yet.');
             }
-        });
 
-        if (error) throw new Error(error.message);
+            // Step 2: Confirm payment with Stripe
+            const {error, paymentIntent} = await stripe.confirmCardPayment(result.client_secret, {
+                payment_method: {
+                    card: cardElement,
+                    billing_details: {
+                        name: formData.customer_name,
+                        email: formData.customer_email
+                    }
+                }
+            });
 
-        // Step 3: Wait for webhook
-        if (paymentIntent.status === 'succeeded') {
-            console.log('Payment succeeded, waiting for webhook...');
-            showProcessingModal();
-            setLoading(false);
-            await waitForWebhookProcessing(result.order_id);
+            if (error) throw new Error(error.message);
+
+            // Step 3: Wait for webhook
+            if (paymentIntent.status === 'succeeded') {
+                console.log('Payment succeeded, waiting for webhook...');
+                showProcessingModal();
+                setLoading(false);
+                await waitForWebhookProcessing(result.order_id);
+            }
+
+            return;
+        }
+
+        if (formData.payment_method === 'xendit') {
+            if (!result.redirect_url) {
+                throw new Error('Xendit payment link was not generated.');
+            }
+
+            window.location.href = result.redirect_url;
+            return;
         }
 
     } catch (error) {
@@ -292,5 +338,6 @@ function showError(message) {
 }
 
 console.log('=== SCRIPT READY ===');
+togglePaymentSections(currentPaymentMethod);
 </script>
 @endpush

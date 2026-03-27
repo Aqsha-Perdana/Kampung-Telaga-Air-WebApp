@@ -126,16 +126,17 @@
                                        title="Edit">
                                         <i class="ti ti-edit"></i>
                                     </a>
-                                    <form action="{{ route('paket-wisata.destroy', $paket->id_paket) }}" 
-                                          method="POST" 
-                                          onsubmit="return confirm('Yakin ingin menghapus paket wisata ini?')"
-                                          style="display: inline-block;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm" title="Hapus">
-                                            <i class="ti ti-trash"></i>
-                                        </button>
-                                    </form>
+                                     <button type="button" 
+                                             class="btn btn-danger btn-sm" 
+                                             title="Hapus"
+                                             onclick="adminDeleteSwal({
+                                                actionUrl: '{{ route('paket-wisata.destroy', $paket->id_paket) }}',
+                                                itemLabel: @js($paket->nama_paket),
+                                                title: 'Delete Tour Package?',
+                                                html: 'This will permanently delete <strong>' + @js($paket->nama_paket) + '</strong>. This action cannot be undone.'
+                                             })">
+                                         <i class="ti ti-trash"></i>
+                                     </button>
                                 </div>
                             </td>
                         </tr>
@@ -164,4 +165,5 @@
     padding: 0.25rem 0.5rem;
 }
 </style>
+
 @endsection

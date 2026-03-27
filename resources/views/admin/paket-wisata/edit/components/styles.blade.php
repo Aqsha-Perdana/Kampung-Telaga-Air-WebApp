@@ -32,11 +32,57 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.badge {
-    display: none;
+#cost-breakdown small {
+    display: block;
+    line-height: 1.8;
 }
 
-.badge:not(:empty) {
-    display: inline-block;
+#profit-alert {
+    transition: all 0.3s ease;
+}
+
+#profit-status-badge {
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.text-success {
+    font-weight: 700;
+}
+
+.card.border-primary {
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.15);
+}
+
+.card.border-success {
+    box-shadow: 0 4px 10px rgba(25, 135, 84, 0.15);
+}
+
+.card.border-danger {
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.15);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 4px 10px rgba(220, 53, 69, 0.15);
+    }
+
+    50% {
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.3);
+    }
 }
 </style>

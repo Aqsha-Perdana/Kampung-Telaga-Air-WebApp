@@ -179,7 +179,7 @@
                                     <form action="{{ route('culinaries.destroy', $culinary) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this kuliner {{ $culinary->nama }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('culinaries.destroy', $culinary) }}', itemLabel: @js($culinary->nama), title: 'Delete Culinary?', html: 'This will permanently delete <strong>' + @js($culinary->nama) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -322,7 +322,7 @@
                                 <form action="{{ route('culinaries.destroy', $culinary) }}" 
                                       method="POST" 
                                       class="d-inline w-50"
-                                      onsubmit="return confirm('Are you sure you want to delete this kuliner {{ $culinary->nama }}?')">
+                                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('culinaries.destroy', $culinary) }}', itemLabel: @js($culinary->nama), title: 'Delete Culinary?', html: 'This will permanently delete <strong>' + @js($culinary->nama) + '</strong>. This action cannot be undone.' });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">

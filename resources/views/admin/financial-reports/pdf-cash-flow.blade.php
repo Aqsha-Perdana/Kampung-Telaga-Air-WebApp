@@ -53,15 +53,23 @@
         <tbody>
             <tr class="section-header"><td colspan="2">CASH FLOWS FROM OPERATING ACTIVITIES</td></tr>
             <tr>
-                <td class="indent-1">Cash Receipts from Customers</td>
-                <td class="text-right">{{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers'], 2) }}</td>
+                <td class="indent-1">Gross Cash Receipts from Customers</td>
+                <td class="text-right">{{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers_gross'], 2) }}</td>
             </tr>
             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
             <tr>
-                <td class="indent-2">via {{ $method === 'stripe' ? 'Credit/Debit Card (Stripe)' : ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
-                <td class="text-right">{{ number_format($data['amount'], 2) }}</td>
+                <td class="indent-2">via {{ payment_method_label($method) }} ({{ $data['count'] }} transactions)</td>
+                <td class="text-right">Gross {{ number_format($data['gross_amount'], 2) }} | Net {{ number_format($data['net_amount'], 2) }}</td>
             </tr>
             @endforeach
+            <tr>
+                <td class="indent-1">Less: Payment Gateway Fees Withheld</td>
+                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_receipts']['payment_gateway_fees_withheld'], 2) }})</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Net Cash Receipts from Customers</td>
+                <td class="text-right">{{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers'], 2) }}</td>
+            </tr>
             <tr>
                 <td class="indent-1">Cash Payments to Suppliers & Service Providers</td>
                 <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['to_suppliers'], 2) }})</td>
@@ -165,4 +173,3 @@
     </div>
 </body>
 </html>
-

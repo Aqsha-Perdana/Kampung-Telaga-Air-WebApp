@@ -185,9 +185,12 @@
 
 <script>
     function confirmDelete(id) {
-        if (confirm('Are you sure you want to delete this footage? This will also remove the file from Cloudinary.')) {
-            document.getElementById('delete-form-' + id).submit();
-        }
+        adminDeleteSwal({
+            formId: 'delete-form-' + id,
+            itemLabel: 'footage ' + id,
+            title: 'Delete Footage?',
+            html: 'This will permanently delete <strong>footage ' + id + '</strong> and remove the file from Cloudinary. This action cannot be undone.'
+        });
     }
 </script>
 @endsection
