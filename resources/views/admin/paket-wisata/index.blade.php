@@ -1,24 +1,10 @@
 @extends('layout.sidebar')
 @section('content')
 <div class="container-fluid">
-    <!-- Header dengan Background Image -->
-    <div class="row mb-4">
-        <div class="col-md-12 px-0">
-            <div class="position-relative" style="height: 200px; border-radius: 10px; overflow: hidden;">
-                <!-- Background Image -->
-                <img src="{{ asset('assets/images/backgrounds/bg-package.png') }}" 
-                     alt="Background" 
-                     class="w-100 h-100" 
-                     style="object-fit: cover; filter: brightness(0.6);">
-                
-                <!-- Overlay Text -->
-                <div class="position-absolute top-50 start-50 translate-middle text-center text-white" style="z-index: 2;">
-                    <h1 class="display-4 fw-bold mb-2" style="color: white !important; text-shadow: 2px 2px 8px rgba(0,0,0,0.8);">Tour Package Data</h1>
-                    <p class="lead mb-0">Manage All Your Package Data</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    @include('admin.paket-wisata.shared.page-header', [
+        'title' => 'Tour Package Data',
+        'subtitle' => 'Manage All Your Package Data',
+    ])
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -71,20 +57,20 @@
                             <td>{{ $paket->durasi_hari }} Days</td>
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
-                                    @if($paket->destinasis->count() > 0)
-                                        <span class="badge bg-info">{{ $paket->destinasis->count() }} Destination</span>
+                                    @if(($paket->destinasis_count ?? 0) > 0)
+                                        <span class="badge bg-info">{{ $paket->destinasis_count }} Destination</span>
                                     @endif
-                                    @if($paket->homestays->count() > 0)
-                                        <span class="badge bg-success">{{ $paket->homestays->count() }} Homestay</span>
+                                    @if(($paket->homestays_count ?? 0) > 0)
+                                        <span class="badge bg-success">{{ $paket->homestays_count }} Homestay</span>
                                     @endif
-                                    @if($paket->paketCulinaries->count() > 0)
-                                        <span class="badge bg-warning text-dark">{{ $paket->paketCulinaries->count() }} Culinary</span>
+                                    @if(($paket->paket_culinaries_count ?? 0) > 0)
+                                        <span class="badge bg-warning text-dark">{{ $paket->paket_culinaries_count }} Culinary</span>
                                     @endif
-                                    @if($paket->boats->count() > 0)
-                                        <span class="badge bg-primary">{{ $paket->boats->count() }} Boat</span>
+                                    @if(($paket->boats_count ?? 0) > 0)
+                                        <span class="badge bg-primary">{{ $paket->boats_count }} Boat</span>
                                     @endif
-                                    @if($paket->kiosks->count() > 0)
-                                        <span class="badge bg-secondary">{{ $paket->kiosks->count() }} Kiosk</span>
+                                    @if(($paket->kiosks_count ?? 0) > 0)
+                                        <span class="badge bg-secondary">{{ $paket->kiosks_count }} Kiosk</span>
                                     @endif
                                 </div>
                             </td>
@@ -126,16 +112,17 @@
                                        title="Edit">
                                         <i class="ti ti-edit"></i>
                                     </a>
-                                    <form action="{{ route('paket-wisata.destroy', $paket->id_paket) }}" 
-                                          method="POST" 
-                                          onsubmit="return confirm('Yakin ingin menghapus paket wisata ini?')"
-                                          style="display: inline-block;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm" title="Hapus">
-                                            <i class="ti ti-trash"></i>
-                                        </button>
-                                    </form>
+                                     <button type="button" 
+                                             class="btn btn-danger btn-sm" 
+                                             title="Hapus"
+                                             onclick="adminDeleteSwal({
+                                                actionUrl: '{{ route('paket-wisata.destroy', $paket->id_paket) }}',
+                                                itemLabel: @js($paket->nama_paket),
+                                                title: 'Delete Tour Package?',
+                                                html: 'This will permanently delete <strong>' + @js($paket->nama_paket) + '</strong>. This action cannot be undone.'
+                                             })">
+                                         <i class="ti ti-trash"></i>
+                                     </button>
                                 </div>
                             </td>
                         </tr>
@@ -164,4 +151,5 @@
     padding: 0.25rem 0.5rem;
 }
 </style>
+
 @endsection

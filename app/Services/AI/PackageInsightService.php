@@ -20,7 +20,7 @@ class PackageInsightService
      */
     public function overview(int $days = 30): array
     {
-        return $this->snapshotOverview($days) ?? $this->liveOverview($days);
+        return $this->liveOverview($days);
     }
 
     /**
@@ -38,11 +38,14 @@ class PackageInsightService
                 'order_items.id_paket',
                 DB::raw('MAX(order_items.nama_paket) as nama_paket'),
                 DB::raw('COUNT(DISTINCT order_items.id_order) as total_orders'),
+                DB::raw('SUM(order_items.jumlah_peserta) as total_participants'),
                 DB::raw('SUM(order_items.subtotal) as total_revenue'),
                 DB::raw('SUM(COALESCE(order_items.company_profit_total, order_items.subtotal - COALESCE(order_items.vendor_cost_total, 0))) as total_profit')
             )
             ->groupBy('order_items.id_paket')
-            ->orderByDesc(DB::raw('SUM(COALESCE(order_items.company_profit_total, order_items.subtotal - COALESCE(order_items.vendor_cost_total, 0)))'))
+            ->orderByDesc(DB::raw('COUNT(DISTINCT order_items.id_order)'))
+            ->orderByDesc(DB::raw('SUM(order_items.jumlah_peserta)'))
+            ->orderByDesc(DB::raw('SUM(order_items.subtotal)'))
             ->first();
 
         $recommendations = $this->recommendationService->getRecommendations();
@@ -63,6 +66,7 @@ class PackageInsightService
                 'id' => (string) $topPackage->id_paket,
                 'name' => (string) $topPackage->nama_paket,
                 'orders' => (int) $topPackage->total_orders,
+                'participants' => (int) ($topPackage->total_participants ?? 0),
                 'revenue' => (float) $topPackage->total_revenue,
                 'profit' => (float) $topPackage->total_profit,
             ] : null,
@@ -150,7 +154,10 @@ class PackageInsightService
                 'revenue' => (float) $items->sum('total_revenue'),
                 'profit' => (float) $items->sum('total_profit'),
             ];
-        })->sortByDesc('profit')->values();
+        })->sort(function (array $left, array $right) {
+            return [$right['orders'], $right['participants'], $right['revenue'], $right['profit']]
+                <=> [$left['orders'], $left['participants'], $left['revenue'], $left['profit']];
+        })->values();
 
         $recommendations = $this->recommendationService->getRecommendations();
         $idleTotal = collect([

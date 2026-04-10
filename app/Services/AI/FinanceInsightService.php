@@ -22,7 +22,7 @@ class FinanceInsightService
         $startDate = $startDate ?: Carbon::now()->subDays(29)->toDateString();
         $endDate = $endDate ?: Carbon::now()->toDateString();
 
-        return $this->snapshotOverview($startDate, $endDate) ?? $this->liveOverview($startDate, $endDate);
+        return $this->liveOverview($startDate, $endDate);
     }
 
     /**

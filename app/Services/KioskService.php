@@ -12,7 +12,15 @@ class KioskService
 {
     public function paginateWithFotos(int $perPage = 10): LengthAwarePaginator
     {
-        return Kiosk::with('fotos')->latest()->paginate($perPage);
+        return Kiosk::query()
+            ->withCount('fotos')
+            ->with([
+                'fotos' => fn ($query) => $query
+                    ->select('id', 'id_kiosk', 'foto', 'urutan')
+                    ->orderBy('urutan'),
+            ])
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function create(array $validated, array $uploadedFotos = []): Kiosk

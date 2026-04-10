@@ -58,8 +58,16 @@
         <tbody>
             <tr class="section-header"><td colspan="2">REVENUE</td></tr>
             <tr>
-                <td class="indent-1">Tour Package Sales</td>
-                <td class="text-right">{{ number_format($profitLoss['revenue']['tour_package_sales'], 2) }}</td>
+                <td class="indent-1">Gross Tour Package Sales</td>
+                <td class="text-right">{{ number_format($profitLoss['revenue']['gross_tour_package_sales'], 2) }}</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Less: Sales Discounts</td>
+                <td class="text-right text-danger">({{ number_format($profitLoss['revenue']['sales_discounts'], 2) }})</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Net Tour Package Sales</td>
+                <td class="text-right">{{ number_format($profitLoss['revenue']['net_tour_package_sales'], 2) }}</td>
             </tr>
             <tr>
                 <td class="indent-1">Other Operating Revenue</td>
@@ -150,6 +158,7 @@
     <div class="mfrs-note no-break">
         <strong>MANAGEMENT NOTES:</strong><br>
         This report has been prepared in accordance with the requirements of Malaysian Financial Reporting Standards (MFRS 101). 
+        Revenue is presented as gross package sales less sales discounts, while gateway fee (MDR) is classified separately under operating expenses.
         The net profit margin was recorded at {{ number_format($profitLoss['profit_for_period']['margin_percentage'], 1) }}% of total operating income RM {{ number_format($profitLoss['revenue']['total_revenue'], 2) }}.
     </div>
 

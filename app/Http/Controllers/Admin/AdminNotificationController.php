@@ -36,7 +36,10 @@ class AdminNotificationController extends Controller
             'date_to' => $dateTo,
         ]);
 
-        $notifications = (clone $query)->paginate(15)->withQueryString();
+        $notifications = (clone $query)
+            ->paginate(15)
+            ->withQueryString()
+            ->withPath($this->internalPath(route('admin.notifications.index')));
 
         $unreadCount = AdminNotification::query()
             ->whereDoesntHave('reads', fn ($q) => $q->where('admin_id', $adminId))
@@ -169,5 +172,12 @@ class AdminNotificationController extends Controller
         $value = trim($value);
 
         return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : '';
+    }
+
+    private function internalPath(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        return is_string($path) && $path !== '' ? $path : $url;
     }
 }

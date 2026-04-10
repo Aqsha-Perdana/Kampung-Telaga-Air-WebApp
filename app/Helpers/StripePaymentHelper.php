@@ -3,6 +3,8 @@
 namespace App\Helpers;
 
 use Stripe\Event;
+use Stripe\BalanceTransaction;
+use Stripe\Charge;
 use Stripe\PaymentIntent;
 use Stripe\Stripe;
 use Stripe\Webhook;
@@ -35,6 +37,20 @@ class StripePaymentHelper
         $paymentIntent = PaymentIntent::retrieve($paymentIntentId);
 
         return $paymentIntent->cancel();
+    }
+
+    public function retrieveCharge(string $chargeId): Charge
+    {
+        $this->setApiKey();
+
+        return Charge::retrieve($chargeId);
+    }
+
+    public function retrieveBalanceTransaction(string $balanceTransactionId): BalanceTransaction
+    {
+        $this->setApiKey();
+
+        return BalanceTransaction::retrieve($balanceTransactionId);
     }
 
     public function constructWebhookEvent(string $payload, ?string $signature): Event

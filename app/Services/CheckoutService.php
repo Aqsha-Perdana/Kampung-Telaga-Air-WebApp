@@ -2,22 +2,19 @@
 
 namespace App\Services;
 
-use App\Helpers\StripePaymentHelper;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentLog;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 class CheckoutService
 {
     public function __construct(
         private readonly ExchangeRateService $exchangeRateService,
-        private readonly StripePaymentHelper $stripePaymentHelper,
+        private readonly PaymentGatewayService $paymentGatewayService,
         private readonly AdminNotificationService $adminNotificationService,
         private readonly OrderItemSnapshotService $orderItemSnapshotService
     ) {
@@ -25,9 +22,11 @@ class CheckoutService
 
     public function getCartItemsForUser(int $userId): Collection
     {
-        return Cart::with('paket')
+        $cartItems = Cart::with('paket')
             ->where('user_id', $userId)
             ->get();
+
+        return $this->synchronizeCartPrices($cartItems);
     }
 
     public function createOrderFromCart(array $validated, int $userId, array $context = []): array
@@ -37,6 +36,8 @@ class CheckoutService
                 ->where('user_id', $userId)
                 ->lockForUpdate()
                 ->get();
+
+            $cartItems = $this->synchronizeCartPrices($cartItems);
 
             if ($cartItems->isEmpty()) {
                 throw new InvalidArgumentException('Your cart is empty.');
@@ -61,8 +62,18 @@ class CheckoutService
                 ->get();
 
             $order = $pendingOrders->first();
+            $cancelledOrderIds = [];
 
             $created = false;
+
+            if ($order && !empty($order->payment_method) && $order->payment_method !== $validated['payment_method']) {
+                if (!$this->cancelPendingOrderModel($order)) {
+                    throw new InvalidArgumentException('Your previous payment is still being processed. Please wait a moment before switching payment methods.');
+                }
+
+                $cancelledOrderIds[] = $order->id_order;
+                $order = null;
+            }
 
             if (!$order) {
                 $order = Order::create([
@@ -110,24 +121,25 @@ class CheckoutService
                 'order_id' => $order->id_order,
                 'client_secret' => null,
                 'created' => $created,
+                'cancelled_order_ids' => $cancelledOrderIds,
                 'stale_pending_order_ids' => $pendingOrders
                     ->skip(1)
+                    ->reject(fn ($pendingOrder) => in_array($pendingOrder->id_order, $cancelledOrderIds, true))
                     ->pluck('id_order')
                     ->values()
                     ->all(),
             ];
 
-            if ($validated['payment_method'] === 'stripe') {
-                $response['client_secret'] = $this->resolveStripeClientSecret(
-                    $order,
-                    $userId,
-                    $baseAmount,
-                    $validated['customer_name'],
-                    $validated['customer_email'],
-                    $displayCurrency,
-                    $displayAmount
-                );
-            }
+            $paymentPayload = $this->paymentGatewayService->createPayment($order, [
+                'user_id' => $userId,
+                'base_amount' => $baseAmount,
+                'customer_name' => $validated['customer_name'],
+                'customer_email' => $validated['customer_email'],
+                'display_currency' => $displayCurrency,
+                'display_amount' => $displayAmount,
+            ]);
+
+            $response = array_merge($response, $paymentPayload);
 
             return $response;
         });
@@ -166,7 +178,26 @@ class CheckoutService
 
     public function getHistoryForUser(int $userId, ?string $status): array
     {
-        $query = Order::with('items.paket')
+        Order::where('user_id', $userId)
+            ->where('status', 'pending')
+            ->where('payment_method', 'xendit')
+            ->latest('created_at')
+            ->limit(5)
+            ->get()
+            ->each(function (Order $order) {
+                $this->paymentGatewayService->syncPendingOrder($order);
+            });
+
+        $query = Order::with([
+            'items' => fn ($itemQuery) => $itemQuery->select([
+                'id',
+                'id_order',
+                'nama_paket',
+                'jumlah_peserta',
+                'tanggal_keberangkatan',
+                'subtotal',
+            ]),
+        ])
             ->where('user_id', $userId)
             ->orderBy('created_at', 'desc');
 
@@ -277,6 +308,16 @@ class CheckoutService
                 (float) $item->subtotal
             );
 
+            $originalSubtotal = (float) ($item->paket->harga_jual ?? $item->subtotal ?? 0);
+            $netSubtotal = (float) ($item->subtotal ?? 0);
+            $discountAmount = max(0, $originalSubtotal - $netSubtotal);
+            $discountPercentage = $originalSubtotal > 0
+                ? round(($discountAmount / $originalSubtotal) * 100, 2)
+                : 0.0;
+            $discountType = $discountAmount > 0
+                ? (string) ($item->paket->tipe_diskon ?? 'none')
+                : 'none';
+
             OrderItem::create([
                 'id_order' => $order->id_order,
                 'id_paket' => $item->id_paket,
@@ -287,6 +328,10 @@ class CheckoutService
                 'catatan' => $item->catatan,
                 'harga_satuan' => $item->harga_satuan,
                 'subtotal' => $item->subtotal,
+                'original_subtotal' => $originalSubtotal,
+                'discount_amount' => $discountAmount,
+                'discount_percentage' => $discountPercentage,
+                'discount_type' => $discountType,
                 'boat_cost_total' => $snapshot['boat_total'],
                 'homestay_cost_total' => $snapshot['homestay_total'],
                 'culinary_cost_total' => $snapshot['culinary_total'],
@@ -322,48 +367,8 @@ class CheckoutService
             return false;
         }
 
-        if (!empty($order->payment_intent_id)) {
-            try {
-                $paymentIntent = $this->stripePaymentHelper->retrievePaymentIntent($order->payment_intent_id);
-
-                if ($paymentIntent->status === 'succeeded') {
-                    return false;
-                }
-
-                if ($paymentIntent->status !== 'canceled') {
-                    $paymentIntent = $this->stripePaymentHelper->cancelPaymentIntent($order->payment_intent_id);
-                }
-
-                if (($paymentIntent->status ?? null) === 'succeeded') {
-                    return false;
-                }
-            } catch (\Throwable $e) {
-                Log::warning('Failed to cancel Stripe payment intent for pending order', [
-                    'order_id' => $order->id_order,
-                    'payment_intent_id' => $order->payment_intent_id,
-                    'error' => $e->getMessage(),
-                ]);
-
-                try {
-                    $latestPaymentIntent = $this->stripePaymentHelper->retrievePaymentIntent($order->payment_intent_id);
-
-                    if ($latestPaymentIntent->status === 'succeeded') {
-                        return false;
-                    }
-
-                    if ($latestPaymentIntent->status !== 'canceled') {
-                        return false;
-                    }
-                } catch (\Throwable $syncError) {
-                    Log::warning('Failed to verify Stripe payment intent after cancel error', [
-                        'order_id' => $order->id_order,
-                        'payment_intent_id' => $order->payment_intent_id,
-                        'error' => $syncError->getMessage(),
-                    ]);
-
-                    return false;
-                }
-            }
+        if (!$this->paymentGatewayService->cancelPendingPayment($order)) {
+            return false;
         }
 
         return DB::transaction(function () use ($order) {
@@ -387,87 +392,21 @@ class CheckoutService
         });
     }
 
-    private function resolveStripeClientSecret(
-        Order $order,
-        int $userId,
-        float $baseAmount,
-        string $customerName,
-        string $customerEmail,
-        string $displayCurrency,
-        ?float $displayAmount
-    ): string {
-        $targetAmountInCents = (int) round($baseAmount * 100);
+    private function synchronizeCartPrices(Collection $cartItems): Collection
+    {
+        foreach ($cartItems as $cartItem) {
+            $latestPrice = (float) ($cartItem->paket->harga_final ?? $cartItem->harga_satuan ?? 0);
 
-        if (!empty($order->payment_intent_id)) {
-            try {
-                $existingIntent = $this->stripePaymentHelper->retrievePaymentIntent($order->payment_intent_id);
-
-                if ($existingIntent->status === 'succeeded') {
-                    throw new InvalidArgumentException('Payment for this order has already been completed.');
-                }
-
-                $amountMatches = (int) $existingIntent->amount === $targetAmountInCents;
-
-                if (in_array($existingIntent->status, ['requires_payment_method', 'requires_confirmation', 'requires_action', 'processing'], true)
-                    && $amountMatches
-                    && !empty($existingIntent->client_secret)) {
-                    return (string) $existingIntent->client_secret;
-                }
-
-                if ($existingIntent->status === 'processing') {
-                    throw new InvalidArgumentException('Your previous payment is still being processed. Please wait a moment before trying again.');
-                }
-
-                if ($existingIntent->status !== 'canceled') {
-                    $this->stripePaymentHelper->cancelPaymentIntent($order->payment_intent_id);
-                }
-            } catch (InvalidArgumentException $e) {
-                throw $e;
-            } catch (\Throwable $e) {
-                Log::warning('Failed while resolving existing Stripe payment intent', [
-                    'order_id' => $order->id_order,
-                    'payment_intent_id' => $order->payment_intent_id,
-                    'error' => $e->getMessage(),
-                ]);
+            if (
+                round((float) ($cartItem->harga_satuan ?? 0), 2) !== round($latestPrice, 2)
+                || round((float) ($cartItem->subtotal ?? 0), 2) !== round($latestPrice, 2)
+            ) {
+                $cartItem->harga_satuan = $latestPrice;
+                $cartItem->subtotal = $latestPrice;
+                $cartItem->save();
             }
         }
 
-        $paymentIntent = $this->stripePaymentHelper->createPaymentIntent(
-            $targetAmountInCents,
-            $customerEmail,
-            $this->buildStripeMetadata($order, $userId, $customerName, $baseAmount, $displayCurrency, $displayAmount)
-        );
-
-        $order->update(['payment_intent_id' => $paymentIntent->id]);
-
-        PaymentLog::create([
-            'id_order' => $order->id_order,
-            'payment_intent_id' => $paymentIntent->id,
-            'payment_method' => 'stripe',
-            'amount' => $baseAmount,
-            'currency' => 'MYR',
-            'status' => 'pending',
-            'response_data' => json_encode($paymentIntent),
-        ]);
-
-        return (string) $paymentIntent->client_secret;
-    }
-
-    private function buildStripeMetadata(
-        Order $order,
-        int $userId,
-        string $customerName,
-        float $baseAmount,
-        string $displayCurrency,
-        ?float $displayAmount
-    ): array {
-        return [
-            'order_id' => $order->id_order,
-            'user_id' => (string) $userId,
-            'customer_name' => Str::limit($customerName, 100, ''),
-            'base_amount' => (string) $baseAmount,
-            'display_currency' => $displayCurrency,
-            'display_amount' => (string) ($displayAmount ?? ''),
-        ];
+        return $cartItems;
     }
 }

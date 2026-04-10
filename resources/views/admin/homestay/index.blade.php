@@ -142,6 +142,8 @@
                                     <img src="{{ asset('storage/' . $homestay->foto) }}" 
                                          alt="{{ $homestay->nama }}" 
                                          class="rounded shadow-sm" 
+                                         loading="lazy"
+                                         decoding="async"
                                          style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;"
                                          data-bs-toggle="tooltip"
                                          title="Klik untuk memperbesar">
@@ -192,7 +194,7 @@
                                     <form action="{{ route('homestays.destroy', $homestay) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this homestay {{ $homestay->nama }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('homestays.destroy', $homestay) }}', itemLabel: @js($homestay->nama), title: 'Delete Homestay?', html: 'This will permanently delete <strong>' + @js($homestay->nama) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -250,6 +252,8 @@
                             <img src="{{ asset('storage/' . $homestay->foto) }}" 
                                  class="card-img-top" 
                                  alt="{{ $homestay->nama }}"
+                                 loading="lazy"
+                                 decoding="async"
                                  style="height: 200px; object-fit: cover;">
                         @else
                             <div class="bg-light d-flex align-items-center justify-content-center" 
@@ -308,7 +312,7 @@
                                 <form action="{{ route('homestays.destroy', $homestay) }}" 
                                       method="POST" 
                                       class="d-inline w-50"
-                                      onsubmit="return confirm('Are you sure you want to delete this homestay {{ $homestay->nama }}?')">
+                                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('homestays.destroy', $homestay) }}', itemLabel: @js($homestay->nama), title: 'Delete Homestay?', html: 'This will permanently delete <strong>' + @js($homestay->nama) + '</strong>. This action cannot be undone.' });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">

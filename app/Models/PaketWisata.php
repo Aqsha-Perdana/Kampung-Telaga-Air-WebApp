@@ -20,6 +20,7 @@ class PaketWisata extends Model
         'minimum_participants',
         'maximum_participants',
         'deskripsi',
+        'foto_thumbnail',
         'harga_total',
         'harga_jual',
         'diskon_nominal',

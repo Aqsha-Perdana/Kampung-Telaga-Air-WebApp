@@ -113,9 +113,7 @@
 <body>
     @php
         $statusLabel = strtoupper(str_replace('_', ' ', (string) $order->status));
-        $paymentMethodLabel = $order->payment_method === 'stripe'
-            ? 'Credit/Debit Card (Stripe)'
-            : strtoupper(str_replace('_', ' ', (string) $order->payment_method));
+        $paymentMethodLabel = payment_method_label($order->payment_method);
     @endphp
     <div class="header">
         <table class="header-table">
@@ -239,4 +237,3 @@
     </div>
 </body>
 </html>
-

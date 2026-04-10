@@ -127,6 +127,8 @@
                                                 <img src="{{ asset('storage/'.$foto->foto) }}" 
                                                      alt="{{ $culinary->nama }}" 
                                                      class="rounded shadow-sm" 
+                                                     loading="lazy"
+                                                     decoding="async"
                                                      style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
                                                      data-bs-toggle="tooltip"
                                                      title="Klik untuk memperbesar">
@@ -159,7 +161,7 @@
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-info bg-opacity-10 text-info px-3 py-2">
-                                    <i class="bi bi-box-seam me-1"></i>{{ $culinary->pakets->count() }} Package
+                                    <i class="bi bi-box-seam me-1"></i>{{ $culinary->pakets_count ?? $culinary->pakets->count() }} Package
                                 </span>
                             </td>
                             <td>
@@ -179,7 +181,7 @@
                                     <form action="{{ route('culinaries.destroy', $culinary) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this kuliner {{ $culinary->nama }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('culinaries.destroy', $culinary) }}', itemLabel: @js($culinary->nama), title: 'Delete Culinary?', html: 'This will permanently delete <strong>' + @js($culinary->nama) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -241,6 +243,8 @@
                                         <img src="{{ asset('storage/'.$foto->foto) }}" 
                                              class="d-block w-100" 
                                              alt="{{ $culinary->nama }}"
+                                             loading="lazy"
+                                             decoding="async"
                                              style="height: 250px; object-fit: cover;">
                                     </div>
                                     @endforeach
@@ -261,10 +265,10 @@
                         @endif
                         
                         <!-- Photo Count Badge -->
-                        @if($culinary->fotos->count() > 0)
+                        @if(($culinary->fotos_count ?? $culinary->fotos->count()) > 0)
                         <div class="position-absolute top-0 end-0 m-3">
                             <span class="badge bg-dark bg-opacity-75 shadow-sm">
-                                <i class="bi bi-camera-fill me-1"></i>{{ $culinary->fotos->count() }} Photo
+                                <i class="bi bi-camera-fill me-1"></i>{{ $culinary->fotos_count ?? $culinary->fotos->count() }} Photo
                             </span>
                         </div>
                         @endif
@@ -277,7 +281,7 @@
                         <!-- Package Count Badge -->
                         <div class="position-absolute bottom-0 start-0 m-3">
                             <span class="badge bg-info shadow-sm">
-                                <i class="bi bi-box-seam me-1"></i>{{ $culinary->pakets->count() }} Package
+                                <i class="bi bi-box-seam me-1"></i>{{ $culinary->pakets_count ?? $culinary->pakets->count() }} Package
                             </span>
                         </div>
                     </div>
@@ -294,15 +298,15 @@
                         </div>
 
                         <!-- Packages Preview (if any) -->
-                        @if($culinary->pakets->count() > 0)
+                        @if(($culinary->pakets_count ?? $culinary->pakets->count()) > 0)
                         <div class="mb-3">
                             <small class="text-muted d-block mb-2">Available Packages:</small>
                             <div class="d-flex flex-wrap gap-1">
                                 @foreach($culinary->pakets->take(3) as $paket)
-                                <span class="badge bg-light text-dark border">{{ $paket->nama }}</span>
+                                <span class="badge bg-light text-dark border">{{ $paket->nama_paket }}</span>
                                 @endforeach
-                                @if($culinary->pakets->count() > 3)
-                                <span class="badge bg-light text-dark border">+{{ $culinary->pakets->count() - 3 }} more</span>
+                                @if(($culinary->pakets_count ?? $culinary->pakets->count()) > 3)
+                                <span class="badge bg-light text-dark border">+{{ ($culinary->pakets_count ?? $culinary->pakets->count()) - 3 }} more</span>
                                 @endif
                             </div>
                         </div>
@@ -322,7 +326,7 @@
                                 <form action="{{ route('culinaries.destroy', $culinary) }}" 
                                       method="POST" 
                                       class="d-inline w-50"
-                                      onsubmit="return confirm('Are you sure you want to delete this kuliner {{ $culinary->nama }}?')">
+                                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('culinaries.destroy', $culinary) }}', itemLabel: @js($culinary->nama), title: 'Delete Culinary?', html: 'This will permanently delete <strong>' + @js($culinary->nama) + '</strong>. This action cannot be undone.' });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">

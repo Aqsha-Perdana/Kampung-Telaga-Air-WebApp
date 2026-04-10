@@ -18,7 +18,7 @@ class DashboardController extends Controller
 
     public function index(Request $request)
     {
-        $cacheKey = 'admin.dashboard.payload.v3';
+        $cacheKey = 'admin.dashboard.payload.v4';
         if ($request->boolean('refresh')) {
             Cache::forget($cacheKey);
         }
@@ -63,6 +63,9 @@ class DashboardController extends Controller
                 'ordersByStatus' => $kpi['ordersByStatus'] ?? collect([]),
                 'totalParticipants' => $kpi['totalParticipants'] ?? 0,
                 'thisMonthParticipants' => $kpi['thisMonthParticipants'] ?? 0,
+                'companyProfitThisMonth' => $kpi['companyProfitThisMonth'] ?? 0,
+                'companyProfitLastMonth' => $kpi['companyProfitLastMonth'] ?? 0,
+                'companyProfitGrowth' => $kpi['companyProfitGrowth'] ?? 0,
 
                 // Charts
                 'revenueTrend' => $revenueTrend,

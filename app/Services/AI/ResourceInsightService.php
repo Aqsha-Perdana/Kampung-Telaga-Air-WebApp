@@ -20,7 +20,7 @@ class ResourceInsightService
     {
         $date = $date ?: Carbon::today()->toDateString();
 
-        return $this->snapshotOverview($date) ?? $this->liveOverview($date);
+        return $this->liveOverview($date);
     }
 
     /**

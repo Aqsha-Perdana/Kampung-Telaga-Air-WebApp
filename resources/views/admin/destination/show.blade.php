@@ -131,7 +131,7 @@
                 <form action="{{ route('destinasis.destroy', $destinasi->id_destinasi) }}" 
                       method="POST" 
                       style="display: inline;"
-                      onsubmit="return confirm('Yakin ingin menghapus destinasi ini beserta {{ $destinasi->fotos->count() }} foto?')">
+                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('destinasis.destroy', $destinasi->id_destinasi) }}', itemLabel: @js($destinasi->nama), title: 'Delete Destination?', html: 'This will permanently delete <strong>' + @js($destinasi->nama) + '</strong> and its ' + @js($destinasi->fotos->count()) + ' photo(s). This action cannot be undone.' });">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">

@@ -12,7 +12,15 @@ class DestinasiService
 {
     public function paginateWithFotos(int $perPage = 10): LengthAwarePaginator
     {
-        return Destinasi::with('fotos')->latest()->paginate($perPage);
+        return Destinasi::query()
+            ->withCount('fotos')
+            ->with([
+                'fotos' => fn ($query) => $query
+                    ->select('id', 'id_destinasi', 'foto', 'urutan')
+                    ->orderBy('urutan'),
+            ])
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function create(array $validated, array $uploadedFotos = []): Destinasi

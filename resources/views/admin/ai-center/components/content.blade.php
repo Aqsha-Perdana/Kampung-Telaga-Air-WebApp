@@ -1,6 +1,7 @@
 <div
     class="container-fluid py-3"
     id="ai-center-app"
+    data-center-url="{{ route('admin.ai-center.index') }}"
     data-history-url-template="{{ $historyUrlTemplate }}"
     data-active-session-id="{{ $activeSessionId }}"
     data-clear-history-url="{{ $clearHistoryUrl }}"
@@ -125,15 +126,15 @@
                 <div class="card-body px-4 pb-4">
                     <div id="ai-session-list" class="session-list">
                         @forelse($recentSessions as $session)
-                            <button
-                                type="button"
+                            <a
+                                href="{{ route('admin.ai-center.index', ['session_id' => $session['session_id']]) }}"
                                 class="session-card {{ $activeSessionId === $session['session_id'] ? 'active' : '' }}"
                                 data-session-id="{{ $session['session_id'] }}"
                             >
                                 <span class="session-title">{{ $session['title'] }}</span>
                                 <span class="session-preview">{{ $session['preview'] }}</span>
                                 <span class="session-meta">{{ $session['message_count'] }} messages - {{ $session['last_activity_label'] }}</span>
-                            </button>
+                            </a>
                         @empty
                             <div class="session-empty" id="ai-session-empty">
                                 No saved chat history yet. Start from the floating assistant to create the first session.

@@ -6,19 +6,22 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Requests\Checkout\ProcessCheckoutRequest;
 use App\Http\Requests\Checkout\RequestRefundRequest;
 use App\Services\CheckoutService;
-use App\Services\StripeOrderService;
+use App\Services\ExchangeRateService;
+use App\Services\PaymentGatewayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
+use UnexpectedValueException;
 
 class CheckoutController extends Controller
 {
     public function __construct(
         private readonly CheckoutService $checkoutService,
-        private readonly StripeOrderService $stripeOrderService
+        private readonly PaymentGatewayService $paymentGatewayService,
+        private readonly ExchangeRateService $exchangeRateService
     ) {
-        $this->middleware('auth')->except(['webhook']);
+        $this->middleware('auth')->except(['webhookStripe', 'webhookXendit']);
     }
 
     public function index()
@@ -45,7 +48,7 @@ class CheckoutController extends Controller
         }
 
         if ($order->status === 'pending') {
-            $this->stripeOrderService->syncPendingOrder($order);
+            $this->paymentGatewayService->syncPendingOrder($order);
             $order->refresh();
         }
 
@@ -53,6 +56,26 @@ class CheckoutController extends Controller
             'status' => $order->status,
             'redeem_code' => $order->redeem_code,
             'paid_at' => $order->paid_at?->toISOString(),
+        ]);
+    }
+
+    public function exchangeRate(string $currency)
+    {
+        $currency = strtoupper(trim($currency));
+        $supportedCurrencies = ['MYR', 'USD', 'IDR', 'SGD', 'EUR', 'GBP', 'AUD', 'JPY', 'CNY'];
+
+        if (!in_array($currency, $supportedCurrencies, true)) {
+            return response()->json([
+                'message' => 'Unsupported currency.',
+            ], 422);
+        }
+
+        $rate = $this->exchangeRateService->getRate($currency);
+
+        return response()->json([
+            'currency' => $currency,
+            'rate' => $rate,
+            'symbol' => $this->exchangeRateService->getSymbol($currency),
         ]);
     }
 
@@ -76,6 +99,14 @@ class CheckoutController extends Controller
                 $response['client_secret'] = $result['client_secret'];
             }
 
+            if (!empty($result['redirect_url'])) {
+                $response['redirect_url'] = $result['redirect_url'];
+            }
+
+            if (!empty($result['payment_reference'])) {
+                $response['payment_reference'] = $result['payment_reference'];
+            }
+
             return response()->json($response);
         } catch (InvalidArgumentException $e) {
             return response()->json([
@@ -92,13 +123,10 @@ class CheckoutController extends Controller
         }
     }
 
-    public function webhook(Request $request)
+    public function webhookStripe(Request $request)
     {
         try {
-            $this->stripeOrderService->handleWebhook(
-                $request->getContent(),
-                $request->header('Stripe-Signature')
-            );
+            $this->paymentGatewayService->handleWebhook('stripe', $request);
         } catch (\UnexpectedValueException|\Stripe\Exception\SignatureVerificationException $e) {
             Log::error('Webhook signature error', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Invalid signature'], 400);
@@ -110,12 +138,27 @@ class CheckoutController extends Controller
         return response()->json(['status' => 'success'], 200);
     }
 
+    public function webhookXendit(Request $request)
+    {
+        try {
+            $this->paymentGatewayService->handleWebhook('xendit', $request);
+        } catch (UnexpectedValueException $e) {
+            Log::error('Xendit webhook signature error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Invalid callback token'], 400);
+        } catch (\Throwable $e) {
+            Log::error('Xendit webhook processing error', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Server error'], 500);
+        }
+
+        return response()->json(['status' => 'success'], 200);
+    }
+
     public function success(Request $request)
     {
         $orderId = $request->query('order_id');
         $order = $this->checkoutService->getOrderWithItemsForUser($orderId, (int) Auth::id());
 
-        $this->stripeOrderService->syncPendingOrder($order);
+        $this->paymentGatewayService->syncPendingOrder($order);
         $order->refresh();
 
         return view('landing.payment-success', compact('order'));
@@ -141,7 +184,7 @@ class CheckoutController extends Controller
     {
         $order = $this->checkoutService->getOrderWithItemsForUser($id_order, (int) Auth::id());
 
-        $this->stripeOrderService->syncPendingOrder($order);
+        $this->paymentGatewayService->syncPendingOrder($order);
         $order->refresh();
 
         return view('landing.order-detail', compact('order'));

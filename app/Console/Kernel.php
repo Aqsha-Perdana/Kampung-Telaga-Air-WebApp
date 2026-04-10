@@ -13,6 +13,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('ai:snapshots:refresh --days=2')->dailyAt('01:30');
+        $schedule->command('payments:sync-gateway-fees --days=14 --limit=150')
+            ->everyThirtyMinutes()
+            ->withoutOverlapping();
     }
 
     /**

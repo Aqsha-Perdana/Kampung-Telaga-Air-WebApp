@@ -1,28 +1,166 @@
 <style>
+.package-breadcrumb {
+    background: #f8fafc;
+}
 
-.paket-detail { padding: 2rem 0; background: #f8fafc; }
-.card { border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.card-header-primary { background: #ffffffff; color: white; padding: 1.25rem; }
-.meta-group { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.meta-item { display: inline-flex; align-items-center; gap: 0.4rem; background: rgba(255,255,255,0.2); padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.9rem; }
-.stat-box { background: #f8fafc; padding: 1rem; border-radius: 6px; }
-.timeline-badge { width: 50px; height: 50px; background: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; font-weight: 700; flex-shrink: 0; }
-.icon-box { width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; flex-shrink: 0; }
-<style>
-/* Additional Styles for Auth Check */
+.package-detail-shell {
+    background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+}
+
+.package-kicker {
+    display: inline-block;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.package-title {
+    font-size: clamp(2rem, 3vw, 2.8rem);
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.package-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.package-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #64748b;
+    font-size: 0.94rem;
+}
+
+.package-hero-card,
+.package-section-card,
+.package-booking-card,
+.package-note-card {
+    border-radius: 24px;
+}
+
+.package-price-card {
+    padding: 1rem 1.15rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    min-width: 210px;
+}
+
+.package-price {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #2563eb;
+    line-height: 1.1;
+}
+
+.package-original-price {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: line-through;
+}
+
+.package-stat-card {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+    height: 100%;
+}
+
+.package-section-header h4,
+.package-section-header h5 {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.package-timeline-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.package-muted-panel {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 1rem;
+}
+
+.package-resource-card {
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.package-icon-box {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.package-booking-badge {
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.package-total-box {
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+}
+
+.package-primary-action {
+    min-height: 54px;
+    border-radius: 14px;
+}
+
+.package-trust-note {
+    border-top: 1px solid #e5e7eb;
+}
+
+.package-checklist li {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.package-checklist i {
+    margin-top: 0.15rem;
+}
+
 .card.border-warning {
     border-width: 2px;
     background: linear-gradient(to bottom, #fffbf0 0%, #ffffff 100%);
 }
 
-/* Disabled Input Style */
-input:disabled, textarea:disabled {
+input:disabled,
+textarea:disabled {
     background-color: #f8f9fa;
     cursor: not-allowed;
     opacity: 0.6;
 }
 
-/* Login Button Animation */
 .btn-primary[href*="login"],
 .btn-warning {
     position: relative;
@@ -49,7 +187,6 @@ input:disabled, textarea:disabled {
     height: 300px;
 }
 
-/* Pulse Animation for Login Card */
 @keyframes pulse-warning {
     0%, 100% {
         box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
@@ -63,7 +200,6 @@ input:disabled, textarea:disabled {
     animation: pulse-warning 2s infinite;
 }
 
-/* Lock Icon Animation */
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
@@ -74,8 +210,6 @@ input:disabled, textarea:disabled {
     animation: shake 0.5s ease;
 }
 
-
-/* Toast Notification Styles */
 .toast-notification {
     position: fixed;
     top: 20px;
@@ -258,7 +392,6 @@ input:disabled, textarea:disabled {
     background: #e5e7eb;
 }
 
-/* Loading Overlay */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -291,7 +424,6 @@ input:disabled, textarea:disabled {
     to { transform: rotate(360deg); }
 }
 
-/* Confetti Animation */
 @keyframes confetti {
     0% { transform: translateY(0) rotate(0deg); opacity: 1; }
     100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
@@ -307,7 +439,6 @@ input:disabled, textarea:disabled {
     animation: confetti 3s ease-out forwards;
 }
 
-/* Cart Badge Animation */
 @keyframes cartBounce {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.2); }
@@ -315,5 +446,23 @@ input:disabled, textarea:disabled {
 
 .cart-badge-animate {
     animation: cartBounce 0.5s ease;
+}
+
+@media (max-width: 991.98px) {
+    .package-price-card {
+        width: 100%;
+        text-align: left !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .package-meta {
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    .package-timeline-item {
+        align-items: flex-start;
+    }
 }
 </style>

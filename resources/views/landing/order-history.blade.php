@@ -22,11 +22,81 @@
 
     $invoiceEligibleStatuses = ['paid', 'refund_requested', 'refunded'];
 @endphp
+<style>
+.order-history-shell {
+    background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+}
 
-<section class="py-5" style="margin-top: 80px;">
+.order-history-heading h2 {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.order-history-kicker {
+    display: inline-block;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.order-history-stat,
+.order-history-filter,
+.order-history-card,
+.order-history-empty {
+    border-radius: 22px;
+}
+
+.order-history-stat .card-body {
+    padding: 1.35rem 1rem;
+}
+
+.order-history-card .card-body {
+    padding: 1.5rem;
+}
+
+.order-history-filter .nav-link {
+    border-radius: 999px;
+    color: #475569;
+}
+
+.order-history-filter .nav-link.active {
+    background: #2563eb;
+    color: #fff;
+}
+
+.order-history-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    color: #64748b;
+}
+
+.order-history-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+}
+
+.order-history-amount-note {
+    color: #64748b;
+}
+
+@media (max-width: 767.98px) {
+    .order-history-meta {
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+}
+</style>
+
+<section class="py-5 order-history-shell" style="margin-top: 80px;">
     <div class="container">
         <div class="row mb-4">
             <div class="col-12">
+                <p class="order-history-kicker mb-2">Your bookings</p>
                 <h2 class="fw-bold mb-1">
                     <i class="bi bi-clock-history me-1"></i> Order History
                 </h2>
@@ -44,7 +114,7 @@
 
         <div class="row g-3 mb-4">
             <div class="col-md-4 col-xl-2">
-                <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card border-0 shadow-sm text-center h-100 order-history-stat">
                     <div class="card-body">
                         <h3 class="fw-bold text-primary mb-1">{{ $stats['total'] }}</h3>
                         <small class="text-muted">Total Orders</small>
@@ -52,7 +122,7 @@
                 </div>
             </div>
             <div class="col-md-4 col-xl-2">
-                <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card border-0 shadow-sm text-center h-100 order-history-stat">
                     <div class="card-body">
                         <h3 class="fw-bold text-success mb-1">{{ $stats['paid'] }}</h3>
                         <small class="text-muted">Completed</small>
@@ -60,7 +130,7 @@
                 </div>
             </div>
             <div class="col-md-4 col-xl-2">
-                <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card border-0 shadow-sm text-center h-100 order-history-stat">
                     <div class="card-body">
                         <h3 class="fw-bold text-warning mb-1">{{ $stats['pending'] }}</h3>
                         <small class="text-muted">Pending</small>
@@ -68,7 +138,7 @@
                 </div>
             </div>
             <div class="col-md-4 col-xl-2">
-                <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card border-0 shadow-sm text-center h-100 order-history-stat">
                     <div class="card-body">
                         <h3 class="fw-bold text-warning mb-1">{{ $stats['refund_requested'] }}</h3>
                         <small class="text-muted">Refund Review</small>
@@ -76,7 +146,7 @@
                 </div>
             </div>
             <div class="col-md-4 col-xl-2">
-                <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card border-0 shadow-sm text-center h-100 order-history-stat">
                     <div class="card-body">
                         <h3 class="fw-bold text-dark mb-1">{{ $stats['refunded'] }}</h3>
                         <small class="text-muted">Refunded</small>
@@ -84,7 +154,7 @@
                 </div>
             </div>
             <div class="col-md-4 col-xl-2">
-                <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card border-0 shadow-sm text-center h-100 order-history-stat">
                     <div class="card-body">
                         <h3 class="fw-bold text-danger mb-1">{{ $stats['failed'] }}</h3>
                         <small class="text-muted">Failed / Cancelled</small>
@@ -93,7 +163,7 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="card border-0 shadow-sm mb-4 order-history-filter">
             <div class="card-body py-2">
                 <ul class="nav nav-pills gap-2">
                     @foreach($filterTabs as $tab)
@@ -116,7 +186,7 @@
         <div class="row">
             <div class="col-12">
                 @if($orders->isEmpty())
-                    <div class="card border-0 shadow-sm">
+                    <div class="card border-0 shadow-sm order-history-empty">
                         <div class="card-body text-center py-5">
                             <i class="bi bi-inbox display-4 text-muted"></i>
                             <h5 class="mt-3">No Orders Yet</h5>
@@ -133,7 +203,7 @@
                             $amount = (float) ($order->base_amount ?? $order->total_amount ?? 0);
                         @endphp
 
-                        <div class="card border-0 shadow-sm mb-3">
+                        <div class="card border-0 shadow-sm mb-3 order-history-card">
                             <div class="card-body">
                                 <div class="row align-items-start g-3">
                                     <div class="col-lg-8">
@@ -144,10 +214,16 @@
                                             </span>
                                         </div>
 
-                                        <p class="text-muted small mb-3">
-                                            <i class="bi bi-calendar-event"></i>
-                                            {{ $order->created_at->format('d M Y, H:i') }}
-                                        </p>
+                                        <div class="order-history-meta small mb-3">
+                                            <span>
+                                                <i class="bi bi-calendar-event"></i>
+                                                {{ $order->created_at->format('d M Y, H:i') }}
+                                            </span>
+                                            <span>
+                                                <i class="bi bi-wallet2"></i>
+                                                {{ payment_method_label($order->payment_method) }}
+                                            </span>
+                                        </div>
 
                                         @foreach($order->items as $item)
                                             <div class="small mb-2">
@@ -202,14 +278,14 @@
                                         <h4 class="fw-bold text-primary mb-1">{{ format_ringgit($amount) }}</h4>
 
                                         @if($order->display_currency && $order->display_currency !== 'MYR' && $order->display_amount)
-                                            <div class="small text-muted mb-3">
+                                            <div class="small order-history-amount-note mb-3">
                                                 Display: {{ $order->display_currency }}
                                                 {{ in_array($order->display_currency, ['IDR', 'JPY'], true)
                                                     ? number_format($order->display_amount, 0)
                                                     : number_format($order->display_amount, 2) }}
                                             </div>
                                         @else
-                                            <div class="small text-muted mb-3">Charged in MYR</div>
+                                            <div class="small order-history-amount-note mb-3">Charged in MYR</div>
                                         @endif
 
                                         <div class="d-grid gap-2">

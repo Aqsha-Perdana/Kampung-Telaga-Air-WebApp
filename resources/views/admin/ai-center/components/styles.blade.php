@@ -104,6 +104,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.32rem;
+    text-decoration: none;
+    color: inherit;
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 

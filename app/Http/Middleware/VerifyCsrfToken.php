@@ -14,5 +14,7 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         'webhook/stripe',
         '/webhook/stripe',  // Stripe webhook harus di-exclude dari CSRF
+        'webhook/xendit',
+        '/webhook/xendit',
     ];
 }

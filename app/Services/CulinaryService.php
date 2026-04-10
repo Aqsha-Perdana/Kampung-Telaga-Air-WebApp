@@ -13,7 +13,18 @@ class CulinaryService
 {
     public function paginateWithRelations(int $perPage = 10): LengthAwarePaginator
     {
-        return Culinary::with(['fotos', 'pakets'])->latest()->paginate($perPage);
+        return Culinary::query()
+            ->withCount(['fotos', 'pakets'])
+            ->with([
+                'fotos' => fn ($query) => $query
+                    ->select('id', 'id_culinary', 'foto', 'urutan')
+                    ->orderBy('urutan'),
+                'pakets' => fn ($query) => $query
+                    ->select('id', 'id_culinary', 'nama_paket')
+                    ->orderBy('nama_paket'),
+            ])
+            ->latest()
+            ->paginate($perPage);
     }
 
     public function create(array $validated, array $uploadedFotos = []): Culinary

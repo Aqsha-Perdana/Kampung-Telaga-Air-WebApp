@@ -46,10 +46,6 @@
           {{-- Total Orders Big Number --}}
           @php
             $totalOrdersAll = $ordersByStatus->sum('count');
-            $totalRevenueByStatus = [];
-            foreach($ordersByStatus as $st) {
-              $totalRevenueByStatus[$st->status] = \DB::table('orders')->where('status', $st->status)->sum('total_amount');
-            }
           @endphp
           <div class="text-center mb-2">
             <h2 class="fw-bolder mb-0 text-dark">{{ number_format($totalOrdersAll) }}</h2>
@@ -75,7 +71,7 @@
                 <span class="text-capitalize fw-medium small">{{ $status->status }}</span>
               </div>
               <div class="d-flex align-items-center gap-2">
-                <span class="text-muted small">{{ format_ringgit($totalRevenueByStatus[$status->status] ?? 0) }}</span>
+                <span class="text-muted small">{{ format_ringgit($status->revenue ?? 0) }}</span>
                 <span class="badge bg-{{ $statusColor }}-subtle text-{{ $statusColor }} fw-semibold">
                   {{ $status->count }} ({{ $pct }}%)
                 </span>

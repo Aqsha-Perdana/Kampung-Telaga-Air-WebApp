@@ -17,9 +17,9 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\CulinaryLandingController;
 use App\Http\Controllers\HomestayLandingController;
 use App\Http\Controllers\Admin\Footage360Controller;
-use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\FinancialReportController;
+use App\Http\Controllers\Admin\PaymentReconciliationController;
 use App\Http\Controllers\SalesController;
 use App\Models\Admin;
 use Illuminate\Http\Request;
@@ -90,9 +90,6 @@ Route::get('/tour-package', [LandingPageController::class, 'paketWisata'])->name
 Route::get('/tour-package/{id}', [LandingPageController::class, 'detailPaket'])->name('landing.detail-paket');
 Route::get('/destination/{id}', [LandingPageController::class, 'detailDestinasi'])
      ->name('landing.detail-destinasi');
-Route::post('/chatbot/send', [ChatbotController::class, 'sendMessage'])
-    ->middleware('throttle:chatbot')
-    ->name('chatbot.send');
 Route::get('/package-tour', [PaketWisataLandingController::class, 'index'])->name('landing.package-tour');
 Route::get('/kiosk', [KioskLandingController::class, 'index'])->name('landing.kiosk');
 Route::get('/kiosk/{id_kiosk}', [KioskLandingController::class, 'show'])->name('landing.kiosk.show');
@@ -156,6 +153,9 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
         Route::post('/paket-wisata/calculate-price', [PaketWisataController::class, 'calculatePrice'])
             ->name('paket-wisata.calculate-price');
         Route::get('/sales', [SalesController::class, 'index'])->name('sales.index');
+        Route::get('/sales/export', [SalesController::class, 'export'])->name('sales.export');
+        Route::get('/payment-reconciliation', [PaymentReconciliationController::class, 'index'])->name('payment-reconciliation.index');
+        Route::post('/payment-reconciliation/{orderId}/refresh', [PaymentReconciliationController::class, 'refresh'])->name('payment-reconciliation.refresh');
         Route::get('/sales/{orderId}', [SalesController::class, 'show'])->name('sales.detail');
         Route::get('/sales/manifest/{id_order}', [SalesController::class, 'downloadManifest'])
             ->name('admin.sales.manifest');
@@ -175,6 +175,8 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
             ->name('financial-reports.export-cash-flow-pdf');
         Route::get('/financial-reports/export-excel', [FinancialReportController::class, 'exportExcel'])
             ->name('financial-reports.export-excel');
+        Route::post('/financial-reports/opening-balance', [FinancialReportController::class, 'storeOpeningBalance'])
+            ->name('financial-reports.opening-balance.store');
         Route::get('owner/{type}/{id}/pdf', [FinancialReportController::class, 'exportOwnerPDF'])->name('financial-reports.owner.pdf');
         Route::get('owner/{type}/{id}/excel', [FinancialReportController::class, 'exportOwnerExcel'])->name('financial-reports.owner.excel');
     });
@@ -198,6 +200,9 @@ Route::middleware(['auth', 'verified.visitor'])->prefix('checkout')->name('check
     Route::post('/process', [CheckoutController::class, 'process'])
         ->middleware('throttle:checkout-process')
         ->name('process');
+    Route::get('/exchange-rate/{currency}', [CheckoutController::class, 'exchangeRate'])
+        ->middleware('throttle:order-status')
+        ->name('exchange-rate');
     Route::get('/success', [CheckoutController::class, 'success'])->name('success');
     Route::get('/failed', [CheckoutController::class, 'failed'])->name('failed');
 });
@@ -220,8 +225,12 @@ Route::middleware(['auth', 'verified.visitor'])->prefix('api')->group(function (
         ->middleware('throttle:order-status');
 });
 
-Route::post('/webhook/stripe', [CheckoutController::class, 'webhook'])
+Route::post('/webhook/stripe', [CheckoutController::class, 'webhookStripe'])
     ->name('webhook.stripe')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+Route::post('/webhook/xendit', [CheckoutController::class, 'webhookXendit'])
+    ->name('webhook.xendit')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 Route::get('/invoice/{order}', [OrderController::class, 'download'])

@@ -1,13 +1,15 @@
 <?php
 
 if (!function_exists('format_ringgit')) {
-    function format_ringgit($amount)
+    function format_ringgit($amount, $showSymbol = true)
     {
         if ($amount === null) {
-            return 'RM 0';
+            return $showSymbol ? 'RM 0.00' : '0.00';
         }
 
-        return 'RM' . number_format($amount, 0, '.', '.');
+        $formatted = number_format((float) $amount, 2, '.', ',');
+
+        return $showSymbol ? 'RM ' . $formatted : $formatted;
     }
 }
 

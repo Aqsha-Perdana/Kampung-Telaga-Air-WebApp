@@ -50,4 +50,63 @@ document.querySelectorAll('form[action*="cart/"]').forEach(form => {
         }
     });
 });
+
+function submitCartDeleteConfirmation(form, config = {}) {
+    const title = config.title || 'Remove item?';
+    const html = config.html || 'This item will be removed from your cart.';
+    const confirmText = config.confirmText || 'Yes, remove it';
+
+    if (window.Swal && typeof window.Swal.fire === 'function') {
+        window.Swal.fire({
+            title,
+            html,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: confirmText,
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            focusCancel: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+
+        return;
+    }
+
+    if (confirm(title.replace(/<[^>]+>/g, '') + '\n\n' + html.replace(/<[^>]+>/g, ''))) {
+        form.submit();
+    }
+}
+
+document.querySelectorAll('.cart-delete-form').forEach(form => {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const itemLabel = this.dataset.itemLabel || 'this item';
+
+        submitCartDeleteConfirmation(this, {
+            title: 'Remove item from cart?',
+            html: `You are about to remove <strong>${itemLabel}</strong> from your cart.`,
+            confirmText: 'Yes, remove it'
+        });
+    });
+});
+
+document.querySelectorAll('.cart-clear-form').forEach(form => {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const itemCount = parseInt(this.dataset.itemCount || '0', 10);
+
+        submitCartDeleteConfirmation(this, {
+            title: 'Empty your cart?',
+            html: `This will remove <strong>${itemCount}</strong> item${itemCount > 1 ? 's' : ''} from your cart.`,
+            confirmText: 'Yes, empty cart'
+        });
+    });
+});
 </script>

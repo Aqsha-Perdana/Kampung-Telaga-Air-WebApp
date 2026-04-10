@@ -156,7 +156,7 @@
                 <form action="{{ route('culinaries.destroy', $culinary->id_culinary) }}" 
                       method="POST" 
                       style="display: inline;"
-                      onsubmit="return confirm('Yakin ingin menghapus kuliner ini beserta {{ $culinary->fotos->count() }} foto dan {{ $culinary->pakets->count() }} paket?')">
+                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('culinaries.destroy', $culinary->id_culinary) }}', itemLabel: @js($culinary->nama), title: 'Delete Culinary?', html: 'This will permanently delete <strong>' + @js($culinary->nama) + '</strong>, its ' + @js($culinary->fotos->count()) + ' photo(s), and ' + @js($culinary->pakets->count()) + ' related package(s). This action cannot be undone.' });">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-danger">

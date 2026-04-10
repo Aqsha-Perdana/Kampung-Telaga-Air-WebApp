@@ -1,293 +1,283 @@
-<!-- Breadcrumb -->
-<section class="py-4" style="background: #f8f9fa; margin-top: 80px;">
+@php
+    $heroDestination = $paket->destinasis->first();
+    $heroDestinationPhoto = optional(optional($heroDestination)->fotos->first())->foto;
+    $heroImage = $paket->foto_thumbnail
+        ? asset('storage/' . $paket->foto_thumbnail)
+        : ($heroDestinationPhoto
+            ? asset('storage/' . $heroDestinationPhoto)
+            : 'https://via.placeholder.com/1200x600?text=' . urlencode($paket->nama_paket));
+
+    $minimumParticipants = max((int) ($paket->minimum_participants ?? 1), 1);
+    $maximumParticipants = $paket->maximum_participants ? (int) $paket->maximum_participants : null;
+    $defaultParticipants = $minimumParticipants;
+    $durationDays = max((int) ($paket->durasi_hari ?? 1), 1);
+    $durationNights = max($durationDays - 1, 0);
+    $price = (float) ($paket->harga_final ?? $paket->harga_jual ?? 0);
+    $minDepartureDate = now()->addDays(3)->format('Y-m-d');
+    $participantRange = $paket->participant_range_label ?? ($minimumParticipants . ' participant' . ($minimumParticipants > 1 ? 's' : ''));
+    $capacityBadge = $paket->capacity_badge_label ?? ('From ' . $minimumParticipants . ' participant' . ($minimumParticipants > 1 ? 's' : ''));
+    $hasDiscount = ((float) ($paket->diskon_nominal ?? 0) > 0) || ((float) ($paket->diskon_persen ?? 0) > 0);
+@endphp
+
+<section class="package-breadcrumb py-3 border-bottom">
     <div class="container">
         <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('landing.paket-wisata') }}">Packages</a></li>
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{{ route('home') }}" class="text-decoration-none">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('landing.paket-wisata') }}" class="text-decoration-none">Tour Package</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ $paket->nama_paket }}</li>
             </ol>
         </nav>
     </div>
 </section>
 
-<!-- Paket Detail -->
-<section class="paket-detail">
+<section class="package-detail-shell py-4 py-lg-5">
     <div class="container">
-        <div class="row g-4">
-            <!-- Left Content -->
+        <div class="row g-4 g-xl-5">
             <div class="col-lg-8">
-                <!-- Hero Card -->
-                <div class="card mb-4" data-aos="fade-up">
-                    <div class="card-header-primary">
-                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                            <div>
-                                <h1 class="h2 mb-2 text-black">{{ $paket->nama_paket }}</h1>
-                                <div class="meta-group">
-                                    <span class="meta-item text-black"><i class="bi bi-calendar-event"></i> {{ $paket->durasi_hari }} Days {{ $paket->durasi_hari - 1 }} Nights</span>   
+                <div class="card border-0 shadow-sm package-hero-card overflow-hidden mb-4">
+                    <div class="card-body p-4 p-xl-5">
+                        <div class="d-flex flex-column flex-xl-row gap-4 justify-content-between align-items-start mb-4">
+                            <div class="flex-grow-1">
+                                <span class="package-kicker mb-2">Tour Package</span>
+                                <h1 class="package-title mb-3">{{ $paket->nama_paket }}</h1>
+                                <div class="package-meta mb-3">
+                                    <span><i class="bi bi-calendar4-week"></i> {{ $durationDays }} day{{ $durationDays > 1 ? 's' : '' }}{{ $durationNights > 0 ? ' / ' . $durationNights . ' night' . ($durationNights > 1 ? 's' : '') : '' }}</span>
+                                    <span><i class="bi bi-people"></i> {{ $participantRange }}</span>
+                                    <span><i class="bi bi-patch-check"></i> {{ ucfirst($paket->status) }}</span>
+                                </div>
+                                <p class="text-muted mb-0">
+                                    {{ $paket->deskripsi ?: 'A curated travel experience with destinations, accommodation, and optional add-on resources prepared in one package.' }}
+                                </p>
+                            </div>
+
+                            <div class="package-price-card text-xl-end">
+                                <div class="text-muted small mb-1">Starting from</div>
+                                @if($hasDiscount && (float) ($paket->harga_jual ?? 0) > $price)
+                                    <div class="package-original-price mb-1">
+                                        {{ format_ringgit($paket->harga_jual) }}
+                                    </div>
+                                @endif
+                                <div class="package-price">{{ format_ringgit($price) }}</div>
+                                <div class="text-muted small mt-1">per package booking</div>
+                            </div>
+                        </div>
+
+                        <div class="ratio ratio-21x9 rounded-4 overflow-hidden mb-4">
+                            <img src="{{ $heroImage }}" alt="{{ $paket->nama_paket }}" class="w-100 h-100 object-fit-cover">
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="package-stat-card">
+                                    <div class="text-muted small mb-1">Destinations</div>
+                                    <div class="h4 mb-0">{{ $paket->destinasis->count() }}</div>
                                 </div>
                             </div>
-                            <div class="text-end">
-                                <span class="badge {{ $paket->status == 'aktif' ? 'bg-success' : 'bg-danger' }} mb-2">
-                                    <i class="bi bi-{{ $paket->status == 'aktif' ? 'check' : 'x' }}-circle"></i> {{ $paket->status == 'aktif' ? 'Available' : 'Not Available' }}
-                                </span>
-                                @if($paket->diskon_nominal > 0 || $paket->diskon_persen > 0)
-                                    <div class="text-decoration-line-through small mb-1">{{ format_ringgit(amount: $paket->harga_jual) }}</div>
-                                    <span class="badge bg-danger mb-2">SAVE {{ $paket->diskon_persen > 0 ?  format_ringgit($paket->diskon_persen).'%' : format_ringgit($paket->diskon_nominal) }}</span>
-                                @endif
-                                <div class="h3 mb-0">{{ format_ringgit($paket->harga_final) }}</div>
-                                <small class="text-white-50">per package</small>
-                                <div class="small mt-1 text-white-50"><i class="bi bi-people-fill"></i> {{ $paket->capacity_badge_label }}</div>
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="package-stat-card">
+                                    <div class="text-muted small mb-1">Stay options</div>
+                                    <div class="h4 mb-0">{{ $paket->homestays->count() }}</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="package-stat-card">
+                                    <div class="text-muted small mb-1">Food packages</div>
+                                    <div class="h4 mb-0">{{ $paket->paketCulinaries->count() }}</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-xl-3">
+                                <div class="package-stat-card">
+                                    <div class="text-muted small mb-1">Support resources</div>
+                                    <div class="h4 mb-0">{{ $paket->boats->count() + $paket->kiosks->count() }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <p class="text-muted mb-3">{{ $paket->deskripsi ?? 'Enjoy an unforgettable travel experience with our complete package specially prepared for you.' }}</p>
-                        <div class="row g-3">
-                            @foreach([
-                                ['icon' => 'geo-alt-fill', 'value' => $paket->destinasis->count(), 'label' => 'Destinations'],
-                                ['icon' => 'house-heart-fill', 'value' => $paket->homestays->count(), 'label' => 'Homestay'],
-                                ['icon' => 'cup-hot-fill', 'value' => $paket->paketCulinaries->count(), 'label' => 'Culinary'],
-                                ['icon' => 'water', 'value' => $paket->boats->count(), 'label' => 'Boat'],
-                                ['icon' => 'shop', 'value' => $paket->kiosks->count(), 'label' => 'Kiosk']
-                            ] as $stat)
-                            <div class="col-6 col-md-3">
-                                <div class="stat-box text-center">
-                                    <i class="bi bi-{{ $stat['icon'] }} fs-4 text-primary"></i>
-                                    <div class="h4 mb-0">{{ $stat['value'] }}</div>
-                                    <small class="text-muted">{{ $stat['label'] }}</small>
-                                </div>
+                </div>
+
+                <div class="card border-0 shadow-sm package-section-card mb-4">
+                    <div class="card-body p-4 p-xl-5">
+                        <div class="package-section-header mb-4">
+                            <h4 class="mb-2">Trip itinerary</h4>
+                            <p class="text-muted mb-0">A day-by-day outline of what guests can expect during the trip.</p>
+                        </div>
+
+                        @if($paket->itineraries->isNotEmpty())
+                            <div class="d-flex flex-column gap-3">
+                                @foreach($paket->itineraries as $itinerary)
+                                    <div class="d-flex gap-3 package-timeline-item">
+                                        <div class="package-timeline-badge">{{ $itinerary->hari_ke }}</div>
+                                        <div class="package-muted-panel flex-grow-1">
+                                            <h5 class="mb-2">{{ $itinerary->judul_hari ?: 'Day ' . $itinerary->hari_ke }}</h5>
+                                            <p class="text-muted mb-0">{{ $itinerary->deskripsi_kegiatan ?: 'The detailed activity plan for this day will be shared during booking confirmation.' }}</p>
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
+                        @else
+                            <div class="package-muted-panel">
+                                <p class="text-muted mb-0">The itinerary details are still being prepared for this package.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm package-section-card mb-4">
+                    <div class="card-body p-4 p-xl-5">
+                        <div class="package-section-header mb-4">
+                            <h4 class="mb-2">What is included in this package</h4>
+                            <p class="text-muted mb-0">These resources are currently linked to the package and help shape the overall experience.</p>
+                        </div>
+
+                        <div class="row g-3">
+                            @foreach($paket->destinasis as $destinasi)
+                                @php
+                                    $destinationImage = optional($destinasi->fotos->first())->foto
+                                        ? asset('storage/' . optional($destinasi->fotos->first())->foto)
+                                        : 'https://via.placeholder.com/640x360?text=' . urlencode($destinasi->nama);
+                                @endphp
+                                <div class="col-md-6">
+                                    <div class="package-resource-card h-100">
+                                        <div class="ratio ratio-16x9">
+                                            <img src="{{ $destinationImage }}" alt="{{ $destinasi->nama }}" class="w-100 h-100 object-fit-cover">
+                                        </div>
+                                        <div class="p-3">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <span class="package-icon-box bg-primary"><i class="bi bi-geo-alt"></i></span>
+                                                <div>
+                                                    <div class="fw-semibold text-dark">{{ $destinasi->nama }}</div>
+                                                    <div class="text-muted small">{{ $destinasi->lokasi ?: 'Destination included in this package' }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @foreach($paket->homestays as $homestay)
+                                <div class="col-md-6">
+                                    <div class="package-resource-card h-100">
+                                        <div class="p-3 h-100">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <span class="package-icon-box bg-success"><i class="bi bi-house-door"></i></span>
+                                                <div>
+                                                    <div class="fw-semibold text-dark">{{ $homestay->nama }}</div>
+                                                    <div class="text-muted small">
+                                                        Capacity {{ $homestay->kapasitas ?? '-' }} guests
+                                                        @if(!is_null($homestay->harga_per_malam))
+                                                            • {{ format_ringgit($homestay->harga_per_malam) }}/night
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @foreach($paket->paketCulinaries as $culinaryPackage)
+                                <div class="col-md-6">
+                                    <div class="package-resource-card h-100">
+                                        <div class="p-3 h-100">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <span class="package-icon-box bg-warning text-dark"><i class="bi bi-fork-knife"></i></span>
+                                                <div>
+                                                    <div class="fw-semibold text-dark">{{ $culinaryPackage->nama_paket }}</div>
+                                                    <div class="text-muted small">
+                                                        {{ optional($culinaryPackage->culinary)->nama ?: 'Culinary package' }}
+                                                        @if(!is_null($culinaryPackage->harga))
+                                                            • {{ format_ringgit($culinaryPackage->harga) }}
+                                                        @endif
+                                                    </div>
+                                                    @if($culinaryPackage->deskripsi_paket)
+                                                        <div class="text-muted small mt-2">{{ $culinaryPackage->deskripsi_paket }}</div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @foreach($paket->boats as $boat)
+                                <div class="col-md-6">
+                                    <div class="package-resource-card h-100">
+                                        <div class="p-3 h-100">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <span class="package-icon-box bg-info"><i class="bi bi-water"></i></span>
+                                                <div>
+                                                    <div class="fw-semibold text-dark">{{ $boat->nama }}</div>
+                                                    <div class="text-muted small">
+                                                        Capacity {{ $boat->kapasitas ?? '-' }} guests
+                                                        @if(!is_null($boat->harga_sewa))
+                                                            • {{ format_ringgit($boat->harga_sewa) }}
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @foreach($paket->kiosks as $kiosk)
+                                <div class="col-md-6">
+                                    <div class="package-resource-card h-100">
+                                        <div class="p-3 h-100">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <span class="package-icon-box bg-dark"><i class="bi bi-shop"></i></span>
+                                                <div>
+                                                    <div class="fw-semibold text-dark">{{ $kiosk->nama }}</div>
+                                                    <div class="text-muted small">
+                                                        Capacity {{ $kiosk->kapasitas ?? '-' }} guests
+                                                        @if(!is_null($kiosk->harga_per_paket))
+                                                            • {{ format_ringgit($kiosk->harga_per_paket) }}
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             @endforeach
                         </div>
-                    </div>
-                </div>
 
-                <!-- Itinerary -->
-                @if($paket->itineraries->count() > 0)
-                <div class="card mb-4" data-aos="fade-up">
-                    <div class="card-header">
-                        <h4 class="mb-0"><i class="bi bi-calendar-check-fill text-primary"></i> Travel Itinerary</h4>
-                    </div>
-                    <div class="card-body">
-                        @foreach($paket->itineraries->sortBy('hari_ke') as $itinerary)
-                        <div class="d-flex gap-3 mb-3">
-                            <div class="timeline-badge">{{ $itinerary->hari_ke }}</div>
-                            <div class="flex-grow-1">
-                                <div class="bg-light p-3 rounded">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h5 class="text-primary mb-0">{{ $itinerary->judul_hari }}</h5>
-                                        <span class="badge bg-light text-dark border">Day {{ $itinerary->hari_ke }}</span>
-                                    </div>
-                                    <p class="text-muted mb-0 small">{{ $itinerary->deskripsi_kegiatan }}</p>
-                                </div>
+                        @if(
+                            $paket->destinasis->isEmpty() &&
+                            $paket->homestays->isEmpty() &&
+                            $paket->paketCulinaries->isEmpty() &&
+                            $paket->boats->isEmpty() &&
+                            $paket->kiosks->isEmpty()
+                        )
+                            <div class="package-muted-panel mt-3">
+                                <p class="text-muted mb-0">The package resource list is not available yet.</p>
                             </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                <!-- Isi Paket -->
-                <div class="card mb-4" data-aos="fade-up">
-                    <div class="card-header">
-                        <h4 class="mb-0"><i class="bi bi-box-seam-fill text-primary"></i> Package Contents</h4>
-                    </div>
-                    <div class="card-body">
-                        <!-- Destinasi -->
-                        @if($paket->destinasis->count() > 0)
-                        <div class="mb-4">
-                            <h5 class="mb-3"><i class="bi bi-geo-alt-fill text-info"></i> Tourist Destinations <span class="badge bg-info">{{ $paket->destinasis->count() }}</span></h5>
-                            <div class="row g-3">
-                                @foreach($paket->destinasis as $destinasi)
-                                <div class="col-md-6">
-                                    <div class="card h-100">
-                                        <div class="row g-0">
-                                            <div class="col-12 col-sm-5">
-                                                <img src="{{ $destinasi->fotos->count() > 0 ? asset('storage/'.$destinasi->fotos->first()->foto) : 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400' }}" class="img-fluid h-100 object-fit-cover" alt="{{ $destinasi->nama }}" loading="lazy">
-                                            </div>
-                                            <div class="col-12 col-sm-7">
-                                                <div class="card-body p-2">
-                                                    <h6 class="mb-1">{{ $destinasi->nama }}</h6>
-                                                    <p class="small text-muted mb-2"><i class="bi bi-geo-alt"></i> {{ $destinasi->lokasi }}</p>
-                                                    <span class="badge bg-info">Day {{ $destinasi->pivot->hari_ke }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Homestay -->
-                        @if($paket->homestays->count() > 0)
-                        <div class="mb-4">
-                            <h5 class="mb-3"><i class="bi bi-house-heart-fill text-success"></i> Homestay Accommodation <span class="badge bg-success">{{ $paket->homestays->count() }}</span></h5>
-                            <div class="row g-3">
-                                @foreach($paket->homestays as $homestay)
-                                <div class="col-md-6">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="d-flex gap-2 align-items-start">
-                                                <div class="icon-box bg-success"><i class="bi bi-house-door"></i></div>
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1">{{ $homestay->nama }}</h6>
-                                                    <div class="small text-muted mb-2">
-                                                        <i class="bi bi-people"></i> {{ $homestay->kapasitas }} people | 
-                                                        <span class="text-success">{{ format_ringgit($homestay->harga_per_malam) }}/night</span>
-                                                    </div>
-                                                    <span class="badge bg-success">{{ $homestay->pivot->jumlah_malam }} Nights</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Kuliner -->
-                        @if($paket->paketCulinaries->count() > 0)
-                        <div class="mb-4">
-                            <h5 class="mb-3"><i class="bi bi-cup-hot-fill text-warning"></i> Culinary Package <span class="badge bg-warning">{{ $paket->paketCulinaries->count() }}</span></h5>
-                            <div class="row g-3">
-                                @foreach($paket->paketCulinaries as $paketCulinary)
-                                <div class="col-md-6">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="d-flex gap-2 align-items-start">
-                                                <div class="icon-box bg-warning"><i class="bi bi-cup-straw"></i></div>
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1">{{ $paketCulinary->culinary->nama }}</h6>
-                                                    <span class="badge bg-warning text-dark mb-2">{{ $paketCulinary->nama_paket }}</span>
-                                                    <div class="small text-muted mb-2">
-                                                        <i class="bi bi-people"></i> {{ $paketCulinary->kapasitas }} portions | 
-                                                        <span class="text-success">{{ format_ringgit($paketCulinary->harga) }}</span>
-                                                    </div>
-                                                    @if($paketCulinary->deskripsi_paket)
-                                                        <p class="small text-muted mb-2">{{ Str::limit($paketCulinary->deskripsi_paket, 80) }}</p>
-                                                    @endif
-                                                    <span class="badge bg-warning">Day {{ $paketCulinary->pivot->hari_ke }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Boat -->
-                        @if($paket->boats->count() > 0)
-                        <div class="mb-4">
-                            <h5 class="mb-3"><i class="bi bi-water text-primary"></i> Boat Transportation <span class="badge bg-primary">{{ $paket->boats->count() }}</span></h5>
-                            <div class="row g-3">
-                                @foreach($paket->boats as $boat)
-                                <div class="col-md-6">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="d-flex gap-2 align-items-start">
-                                                <div class="icon-box bg-primary"><i class="bi bi-water"></i></div>
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1">{{ $boat->nama }}</h6>
-                                                    <div class="small text-muted mb-2">
-                                                        <i class="bi bi-people"></i> {{ $boat->kapasitas }} passengers | 
-                                                        <span class="text-success">{{ format_ringgit($boat->harga_sewa) }}</span>
-                                                    </div>
-                                                    <span class="badge bg-primary">Day {{ $boat->pivot->hari_ke }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Kiosk -->
-                        @if($paket->kiosks->count() > 0)
-                        <div class="mb-0">
-                            <h5 class="mb-3"><i class="bi bi-shop text-secondary"></i> Kiosk Visit <span class="badge bg-secondary">{{ $paket->kiosks->count() }}</span></h5>
-                            <div class="row g-3">
-                                @foreach($paket->kiosks as $kiosk)
-                                <div class="col-md-6">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <div class="d-flex gap-2 align-items-start">
-                                                <div class="icon-box bg-secondary"><i class="bi bi-shop-window"></i></div>
-                                                <div class="flex-grow-1">
-                                                    <h6 class="mb-1">{{ $kiosk->nama }}</h6>
-                                                    <div class="small text-muted mb-2">
-                                                        <i class="bi bi-people"></i> {{ $kiosk->kapasitas }} people | 
-                                                        <span class="text-success">{{ format_ringgit($kiosk->harga_per_paket) }}</span>
-                                                    </div>
-                                                    <span class="badge bg-secondary">Day {{ $kiosk->pivot->hari_ke }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @endforeach
-                            </div>
-                        </div>
                         @endif
                     </div>
                 </div>
 
-                <!-- Include & Exclude -->
-                <div class="row g-3 mb-4" data-aos="fade-up">
+                <div class="row g-4">
                     <div class="col-md-6">
-                        <div class="card border-success h-100">
-                            <div class="card-body">
-                                <h5 class="text-success mb-3"><i class="bi bi-check-circle-fill"></i> Included</h5>
-                                <ul class="list-unstyled small">
-                                    @foreach(['Entrance tickets to all tourist destinations', 'Homestay accommodation as per package', 'Meals as per itinerary', 'Boat transportation between islands', 'Professional tour guide', 'Photo & video documentation', 'Travel insurance', 'Bottled water during the trip'] as $item)
-                                    <li class="mb-2"><i class="bi bi-check-lg text-success"></i> {{ $item }}</li>
-                                    @endforeach
+                        <div class="card border-0 shadow-sm package-section-card h-100">
+                            <div class="card-body p-4">
+                                <h5 class="mb-3">Good to know before booking</h5>
+                                <ul class="list-unstyled package-checklist text-muted mb-0">
+                                    <li><i class="bi bi-check-circle-fill text-success"></i><span>Departure date should be at least 3 days from today.</span></li>
+                                    <li><i class="bi bi-check-circle-fill text-success"></i><span>Booking availability follows the participant range of the package.</span></li>
+                                    <li><i class="bi bi-check-circle-fill text-success"></i><span>You can still review your booking again in the cart before payment.</span></li>
                                 </ul>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="card border-danger h-100">
-                            <div class="card-body">
-                                <h5 class="text-danger mb-3"><i class="bi bi-x-circle-fill"></i> Not Included</h5>
-                                <ul class="list-unstyled small">
-                                    @foreach(['Flight tickets/transportation to starting location', 'Personal expenses outside the package', 'Additional activities outside itinerary', 'Tips for guide (optional)', 'Homestay room upgrade', 'Laundry and telephone'] as $item)
-                                    <li class="mb-2"><i class="bi bi-x-lg text-danger"></i> {{ $item }}</li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Terms -->
-                <div class="card mb-4" data-aos="fade-up">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-info-circle-fill text-primary"></i> Terms & Conditions</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <ul class="small text-muted">
-                                    <li>Minimum booking 3 days before departure</li>
-                                    <li>Full payment is required during checkout</li>
-                                    <li>Payment confirmation is completed online via Stripe</li>
-                                    <li>Approved refund requests are subject to a fixed 10% refund fee</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <ul class="small text-muted">
-                                    <li>Net refund amount is 90% of the paid ticket value</li>
-                                    <li>Prices may change during holiday season</li>
-                                    <li>{{ $paket->participant_range_label }}</li>
-                                    <li>Participants must bring official identification</li>
+                        <div class="card border-0 shadow-sm package-section-card h-100">
+                            <div class="card-body p-4">
+                                <h5 class="mb-3">Recommended for</h5>
+                                <ul class="list-unstyled package-checklist text-muted mb-0">
+                                    <li><i class="bi bi-dot text-primary"></i><span>Travelers looking for a ready-made itinerary.</span></li>
+                                    <li><i class="bi bi-dot text-primary"></i><span>Family or group trips with clearer cost planning.</span></li>
+                                    <li><i class="bi bi-dot text-primary"></i><span>Guests who prefer a smoother booking flow in one package.</span></li>
                                 </ul>
                             </div>
                         </div>
@@ -295,194 +285,150 @@
                 </div>
             </div>
 
-            <!-- Right Sidebar -->
             <div class="col-lg-4">
-    <div class="sticky-top" style="top: 100px;">
-        <!-- Booking Card -->
-        <div class="card mb-3" data-aos="fade-up">
-            <div class="card-header-primary text-center">
-                <h5 class="mb-0"><i class="bi bi-cart-check"></i> Book This Package</h5>
-            </div>
-            <div class="card-body">
-                <form action="{{ route('cart.add') }}" method="POST" id="addToCartForm">
-                    @csrf
-                    <input type="hidden" name="id_paket" value="{{ $paket->id_paket }}">
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold"><i class="bi bi-people-fill text-primary"></i> Number of Participants</label>
-                        <input type="number" 
-                               class="form-control" 
-                               name="jumlah_peserta" 
-                               min="{{ max((int) ($paket->minimum_participants ?? 1), 1) }}"
-                               @if($paket->maximum_participants) max="{{ $paket->maximum_participants }}" @endif
-                               data-min-participants="{{ max((int) ($paket->minimum_participants ?? 1), 1) }}"
-                               data-max-participants="{{ $paket->maximum_participants }}"
-                               value="{{ max((int) ($paket->minimum_participants ?? 1), 1) }}" 
-                               {{ Auth::guest() ? 'disabled' : 'required' }}>
-                        <small class="text-muted">{{ $paket->participant_range_label }}. Participant count is used for planning and capacity only.</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold"><i class="bi bi-calendar-event text-primary"></i> Departure Date</label>
-                        <input type="date" 
-                               class="form-control" 
-                               name="tanggal_keberangkatan" 
-                               min="{{ date('Y-m-d', strtotime('+3 days')) }}" 
-                               {{ Auth::guest() ? 'disabled' : 'required' }}>
-                        <small class="text-muted">Minimum 3 days from today</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold"><i class="bi bi-chat-left-text text-primary"></i> Notes (Optional)</label>
-                        <textarea class="form-control" 
-                                  name="catatan" 
-                                  rows="3" 
-                                  placeholder="Special requests, food allergies, etc..."
-                                  {{ Auth::guest() ? 'disabled' : '' }}></textarea>
-                    </div>
+                <div class="position-sticky" style="top: 100px;">
+                    <div class="card border-0 shadow-sm package-booking-card mb-4">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                <div>
+                                    <span class="package-kicker mb-2">Ready to book?</span>
+                                    <h4 class="mb-1">Plan your trip</h4>
+                                    <p class="text-muted small mb-0">Choose your date and participants, then continue to cart.</p>
+                                </div>
+                                <span class="package-booking-badge">{{ $capacityBadge }}</span>
+                            </div>
 
-                    <div class="bg-light p-3 rounded mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Package Price:</span>
-                            <span class="fw-bold">{{ format_ringgit($paket->harga_final) }} per package</span>
+                            <div class="package-total-box mb-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="text-muted small">Package price</div>
+                                        @if($hasDiscount && (float) ($paket->harga_jual ?? 0) > $price)
+                                            <div class="package-original-price mb-1">
+                                                {{ format_ringgit($paket->harga_jual) }}
+                                            </div>
+                                        @endif
+                                        <strong class="d-block fs-4 text-dark">{{ format_ringgit($price) }}</strong>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-muted small">Charged in</div>
+                                        <strong class="text-primary">MYR</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form id="addToCartForm" action="{{ route('cart.add') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="id_paket" value="{{ $paket->id_paket }}">
+
+                                <div class="mb-3">
+                                    <label for="jumlah_peserta" class="form-label fw-semibold">Participants</label>
+                                    <input
+                                        type="number"
+                                        class="form-control form-control-lg"
+                                        id="jumlah_peserta"
+                                        name="jumlah_peserta"
+                                        value="{{ $defaultParticipants }}"
+                                        min="{{ $minimumParticipants }}"
+                                        @if($maximumParticipants) max="{{ $maximumParticipants }}" @endif
+                                        data-min-participants="{{ $minimumParticipants }}"
+                                        @if($maximumParticipants) data-max-participants="{{ $maximumParticipants }}" @endif
+                                        @guest disabled @endguest
+                                    >
+                                    <div class="form-text">
+                                        {{ $participantRange }}
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="tanggal_keberangkatan" class="form-label fw-semibold">Departure date</label>
+                                    <input
+                                        type="date"
+                                        class="form-control form-control-lg"
+                                        id="tanggal_keberangkatan"
+                                        name="tanggal_keberangkatan"
+                                        min="{{ $minDepartureDate }}"
+                                        @guest disabled @endguest
+                                    >
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="catatan" class="form-label fw-semibold">Special notes</label>
+                                    <textarea
+                                        class="form-control"
+                                        id="catatan"
+                                        name="catatan"
+                                        rows="4"
+                                        placeholder="Share any request or important note for your booking."
+                                        @guest disabled @endguest
+                                    ></textarea>
+                                </div>
+
+                                @guest
+                                    <a href="{{ route('wisatawan.login') }}" class="btn btn-primary btn-lg w-100 package-primary-action mb-2">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>Log In to Book Package
+                                    </a>
+                                @else
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 package-primary-action mb-2">
+                                        <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                                    </button>
+                                @endguest
+
+                                <a href="{{ route('cart.index') }}" class="btn btn-outline-primary btn-lg w-100 package-primary-action mb-2">
+                                    <i class="bi bi-cart3 me-2"></i>View Cart
+                                </a>
+
+                                <a
+                                    href="https://wa.me/6281234567890?text={{ urlencode('Hello, I am interested in the package ' . $paket->nama_paket . '. Can I get more details?') }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="btn btn-outline-secondary btn-lg w-100 package-primary-action"
+                                >
+                                    <i class="bi bi-whatsapp me-2"></i>Ask via WhatsApp
+                                </a>
+                            </form>
+
+                            <div class="package-trust-note pt-3 mt-4">
+                                <div class="d-flex gap-2 text-muted small mb-2">
+                                    <i class="bi bi-shield-check text-success"></i>
+                                    <span>Your booking details stay editable in the cart before checkout.</span>
+                                </div>
+                                <div class="d-flex gap-2 text-muted small mb-0">
+                                    <i class="bi bi-credit-card text-primary"></i>
+                                    <span>Payments are completed securely in the next step.</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Booking Rule:</span>
-                            <span class="fw-semibold">{{ $paket->participant_range_label }}</span>
-                        </div>
-                        <hr class="my-2">
-                        <div class="d-flex justify-content-between">
-                            <span class="fw-bold">Total:</span>
-                            <span class="h5 text-primary mb-0">{{ format_ringgit($paket->harga_final) }}</span>
+                    </div>
+
+                    <div class="card border-0 shadow-sm package-note-card mb-4">
+                        <div class="card-body p-4">
+                            <h5 class="mb-3">Need help deciding?</h5>
+                            <p class="text-muted mb-3">
+                                This package is ideal if you want a clearer itinerary, simpler booking, and a single package price for your trip.
+                            </p>
+                            <ul class="list-unstyled package-checklist text-muted mb-0">
+                                <li><i class="bi bi-check-circle-fill text-success"></i><span>Clear participant requirement</span></li>
+                                <li><i class="bi bi-check-circle-fill text-success"></i><span>Booking summary before payment</span></li>
+                                <li><i class="bi bi-check-circle-fill text-success"></i><span>Stripe and Xendit payment support</span></li>
+                            </ul>
                         </div>
                     </div>
 
-                    @if($paket->status == 'aktif')
-                        @guest
-                            <!-- Tombol untuk Guest (Belum Login) -->
-                            <a href="{{ route('wisatawan.login') }}" class="btn btn-primary w-100 mb-2">
-                                <i class="bi bi-lock-fill"></i> Log In to Book Package
-                            </a>
-                            <button type="button" class="btn btn-success w-100 mb-2" data-bs-toggle="modal" data-bs-target="#inquiryModal">
-                                <i class="bi bi-whatsapp"></i> Ask via WhatsApp
-                            </button>
-                        @else
-                            <!-- Tombol untuk User yang Sudah Login -->
-                            <button type="submit" class="btn btn-primary w-100 mb-2">
-                                <i class="bi bi-cart-plus"></i> Add to Cart
-                            </button>
-                            <button type="button" class="btn btn-success w-100 mb-2" data-bs-toggle="modal" data-bs-target="#inquiryModal">
-                                <i class="bi bi-whatsapp"></i> Ask via WhatsApp
-                            </button>
-                        @endguest
-                    @else
-                        <button type="button" class="btn btn-secondary w-100 mb-2" disabled>
-                            <i class="bi bi-x-circle"></i> Package Not Available
-                        </button>
-                    @endif
-                </form>
-
-                @auth
-                    <a href="{{ route('cart.index') }}" class="btn btn-outline-primary w-100 mb-3">
-                        <i class="bi bi-cart3"></i> View Cart
-                    </a>
-                @endauth
-
-                <div class="border-top pt-3">
-                    @foreach([['icon' => 'shield-check', 'text' => 'Secure Payment'], ['icon' => 'arrow-clockwise', 'text' => 'Refund Policy'], ['icon' => 'headset', 'text' => '24/7 Support']] as $trust)
-                    <div class="d-flex align-items-center gap-2 mb-2 small text-muted">
-                        <i class="bi bi-{{ $trust['icon'] }} text-primary"></i>
-                        <span>{{ $trust['text'] }}</span>
-                    </div>
-                    @endforeach
+                    @guest
+                        <div class="card border-warning shadow-sm package-note-card">
+                            <div class="card-body p-4">
+                                <h5 class="mb-2">Guest browsing mode</h5>
+                                <p class="text-muted mb-3">
+                                    You can explore the package details first. Log in when you are ready to save the booking to your cart.
+                                </p>
+                                <a href="{{ route('wisatawan.login') }}" class="btn btn-warning w-100">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Log In Now
+                                </a>
+                            </div>
+                        </div>
+                    @endguest
                 </div>
             </div>
-        </div>
-
-        <!-- Login Notice Card (Only for Guest) -->
-        @guest
-        <div class="card mb-3 border-warning" data-aos="fade-up">
-            <div class="card-body text-center">
-                <i class="bi bi-info-circle text-warning" style="font-size: 2.5rem;"></i>
-                <h6 class="mt-3 mb-2">Login Required</h6>
-                <p class="small text-muted mb-3">Please log in to book this package and enjoy exclusive member benefits.</p>
-                <div class="d-grid gap-2">
-                    <a href="{{ route('wisatawan.login') }}" class="btn btn-warning btn-sm">
-                        <i class="bi bi-box-arrow-in-right"></i> Log In Now
-                    </a>
-                    <a href="{{ route('wisatawan.register') }}" class="btn btn-outline-warning btn-sm">
-                        <i class="bi bi-person-plus"></i> Create Account
-                    </a>
-                </div>
-            </div>
-        </div>
-        @endguest
-
-        <!-- Info Card -->
-        <div class="card mb-3" data-aos="fade-up">
-            <div class="card-body">
-                <h6 class="mb-2"><i class="bi bi-question-circle text-primary"></i> Need Help?</h6>
-                <p class="small text-muted mb-3">Our team is ready to help you anytime</p>
-                @foreach([
-                    ['url' => 'https://wa.me/6281234567890', 'class' => 'success', 'icon' => 'whatsapp', 'text' => 'Chat WhatsApp'],
-                    ['url' => 'mailto:info@wisata.com', 'class' => 'outline-primary', 'icon' => 'envelope', 'text' => 'Email Us'],
-                    ['url' => 'tel:+6281234567890', 'class' => 'outline-secondary', 'icon' => 'telephone', 'text' => 'Call']
-                ] as $contact)
-                <a href="{{ $contact['url'] }}" class="btn btn-{{ $contact['class'] }} btn-sm w-100 mb-2" {{ Str::contains($contact['url'], 'http') ? 'target="_blank"' : '' }}>
-                    <i class="bi bi-{{ $contact['icon'] }}"></i> {{ $contact['text'] }}
-                </a>
-                @endforeach
-            </div>
-        </div>
-
-        <!-- Why Choose Us -->
-        <div class="card" data-aos="fade-up">
-            <div class="card-body">
-                <h6 class="mb-3"><i class="bi bi-star text-warning"></i> Why Choose Us?</h6>
-                <ul class="list-unstyled small">
-                    @foreach(['Affordable & transparent prices', 'Experienced guide', 'Comfortable accommodation', 'Professional documentation', 'Responsive customer service'] as $reason)
-                    <li class="mb-2"><i class="bi bi-check2-circle text-success"></i> {{ $reason }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
         </div>
     </div>
 </section>
-
-<!-- Inquiry Modal -->
-<div class="modal fade" id="inquiryModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title"><i class="bi bi-whatsapp"></i> Contact Us</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3">Fill the form below or directly chat our WhatsApp</p>
-                <form action="https://wa.me/6281234567890" method="GET" target="_blank">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Full Name</label>
-                        <input type="text" class="form-control" name="text" required placeholder="Enter your name">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">WhatsApp Number</label>
-                        <input type="tel" class="form-control" required placeholder="08xx xxxx xxxx">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Number of Participants</label>
-                        <input type="number" class="form-control" min="1" required placeholder="How many people?">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Message</label>
-                        <textarea class="form-control" rows="3" placeholder="Ask anything about this package...">Hello, I'm interested in the {{ $paket->nama_paket }} package. Please provide more information.</textarea>
-                    </div>
-                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-whatsapp"></i> Send via WhatsApp</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-

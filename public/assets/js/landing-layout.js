@@ -54,6 +54,7 @@
     function optimizeNavigationTransitions() {
         var warmedUrls = new Set();
         var warmingUrls = new Set();
+        var hoverTimers = new WeakMap();
         var progressBar = document.getElementById('visitorNavProgressBar');
         var resetTimer = null;
 
@@ -147,9 +148,38 @@
             prefetchUrl(link.getAttribute('href'));
         };
 
+        var prefetchOnHover = function (event) {
+            var link = getLink(event);
+            if (!canPrefetch(link)) return;
+
+            if (event.type === 'mouseout') {
+                if (event.relatedTarget && link.contains(event.relatedTarget)) {
+                    return;
+                }
+
+                var existingTimer = hoverTimers.get(link);
+                if (existingTimer) {
+                    clearTimeout(existingTimer);
+                    hoverTimers.delete(link);
+                }
+                return;
+            }
+
+            if (hoverTimers.has(link)) return;
+
+            var timer = setTimeout(function () {
+                prefetchUrl(link.getAttribute('href'));
+                hoverTimers.delete(link);
+            }, 60);
+
+            hoverTimers.set(link, timer);
+        };
+
         document.addEventListener('pointerdown', prefetchOnIntent, { passive: true });
         document.addEventListener('focusin', prefetchOnIntent, { passive: true });
         document.addEventListener('touchstart', prefetchOnIntent, { passive: true });
+        document.addEventListener('mouseover', prefetchOnHover, { passive: true });
+        document.addEventListener('mouseout', prefetchOnHover, { passive: true });
         document.addEventListener('click', function (event) {
             var link = getLink(event);
             if (!canPrefetch(link)) return;

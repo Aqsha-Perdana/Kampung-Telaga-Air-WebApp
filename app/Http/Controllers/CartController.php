@@ -70,7 +70,17 @@ class CartController extends Controller
 
     public function index()
     {
-        $cartItems = $this->getCartQuery()->with('paket')->get();
+        $cartItems = $this->synchronizeCartPrices(
+            $this->getCartQuery()
+                ->with([
+                    'paket' => fn ($query) => $query->with([
+                        'destinasis' => fn ($destQuery) => $destQuery->with([
+                            'fotos' => fn ($fotoQuery) => $fotoQuery->orderBy('urutan'),
+                        ]),
+                    ]),
+                ])
+                ->get()
+        );
         $total = $cartItems->sum('subtotal');
 
         return view('landing.cart', compact('cartItems', 'total'));
@@ -122,7 +132,8 @@ class CartController extends Controller
             $this->ensureParticipantRules($paket, $newParticipants);
 
             $existingCart->jumlah_peserta = $newParticipants;
-            $existingCart->subtotal = $existingCart->harga_satuan;
+            $existingCart->harga_satuan = (float) $paket->harga_final;
+            $existingCart->subtotal = (float) $paket->harga_final;
 
             if (!empty($validated['catatan'])) {
                 $existingCart->catatan = $validated['catatan'];
@@ -196,7 +207,8 @@ class CartController extends Controller
             'jumlah_peserta' => $validated['jumlah_peserta'],
             'tanggal_keberangkatan' => $validated['tanggal_keberangkatan'],
             'catatan' => $validated['catatan'],
-            'subtotal' => $cartItem->harga_satuan,
+            'harga_satuan' => (float) ($cartItem->paket->harga_final ?? $cartItem->harga_satuan),
+            'subtotal' => (float) ($cartItem->paket->harga_final ?? $cartItem->harga_satuan),
         ]);
 
         return redirect()->back()->with('success', 'Your cart has been updated.');
@@ -255,5 +267,23 @@ class CartController extends Controller
                 'jumlah_peserta' => 'This package allows up to ' . $maximum . ' participant' . ($maximum > 1 ? 's' : '') . ' per booking.',
             ]);
         }
+    }
+
+    private function synchronizeCartPrices($cartItems)
+    {
+        foreach ($cartItems as $cartItem) {
+            $latestPrice = (float) ($cartItem->paket->harga_final ?? $cartItem->harga_satuan ?? 0);
+
+            if (
+                round((float) ($cartItem->harga_satuan ?? 0), 2) !== round($latestPrice, 2)
+                || round((float) ($cartItem->subtotal ?? 0), 2) !== round($latestPrice, 2)
+            ) {
+                $cartItem->harga_satuan = $latestPrice;
+                $cartItem->subtotal = $latestPrice;
+                $cartItem->save();
+            }
+        }
+
+        return $cartItems;
     }
 }

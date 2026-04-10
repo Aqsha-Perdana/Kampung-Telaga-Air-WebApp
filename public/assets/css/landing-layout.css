@@ -295,7 +295,7 @@
         line-height: 1;
     }
 
-    /* Ensure sticky cards do not collide with navbar/chatbot on narrow view */
+    /* Ensure sticky cards do not collide with the compact mobile navbar on narrow view */
     @media (max-width: 991.98px) {
         .sticky-top,
         [style*="top: 100px"] {

@@ -23,16 +23,35 @@ class AICenterController extends Controller
     ) {
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $adminId = Auth::guard('admin')->id();
         $aiTablesReady = $this->aiTablesReady();
+        if ($aiTablesReady && $adminId) {
+            $this->normalizeLegacyBlankSessionIds((int) $adminId);
+        }
+
         $recentSessions = $aiTablesReady && $adminId ? $this->recentSessionsForAdmin((int) $adminId) : [];
+        $requestedSessionId = trim((string) $request->query('session_id', ''));
         $activeSessionId = $recentSessions[0]['session_id'] ?? null;
-        $activeMessages = $activeSessionId && $adminId
+
+        if ($requestedSessionId !== '' && $adminId && $aiTablesReady) {
+            $requestedSession = $this->buildSessionSummary($requestedSessionId, (int) $adminId);
+
+            if ($requestedSession !== null) {
+                $activeSessionId = $requestedSessionId;
+                $recentSessions = collect([$requestedSession])
+                    ->merge(collect($recentSessions)->reject(fn (array $session) => $session['session_id'] === $requestedSessionId))
+                    ->values()
+                    ->all();
+            }
+        }
+
+        $hasActiveSession = $activeSessionId !== null;
+        $activeMessages = $hasActiveSession && $adminId
             ? $this->sessionMessagesForAdmin((string) $activeSessionId, (int) $adminId)
             : [];
-        $activeSessionMemory = $activeSessionId && $adminId
+        $activeSessionMemory = $hasActiveSession && $adminId
             ? $this->sessionMemoryService->payload((string) $activeSessionId, (int) $adminId)
             : [];
         $usageOverview = $adminId && $aiTablesReady ? $this->usageOverviewForAdmin((int) $adminId) : [
@@ -103,7 +122,12 @@ class AICenterController extends Controller
             $admin = Auth::guard('admin')->user();
             $adminId = (int) ($admin?->id ?? 0);
             $message = trim((string) $request->input('message'));
-            $sessionId = trim((string) $request->input('session_id', (string) Str::uuid()));
+            if ($adminId > 0) {
+                $this->normalizeLegacyBlankSessionIds($adminId);
+            }
+
+            $incomingSessionId = trim((string) $request->input('session_id', ''));
+            $sessionId = $incomingSessionId !== '' ? $incomingSessionId : (string) Str::uuid();
             $startedAt = microtime(true);
 
             $adminLog = AiChatLog::create([
@@ -171,6 +195,9 @@ class AICenterController extends Controller
             }
 
             $adminId = (int) Auth::guard('admin')->id();
+            if ($adminId > 0) {
+                $this->normalizeLegacyBlankSessionIds($adminId);
+            }
             $summary = $this->buildSessionSummary($sessionId, $adminId);
 
             if ($summary === null) {
@@ -245,6 +272,51 @@ class AICenterController extends Controller
     private function aiTablesReady(): bool
     {
         return Schema::hasTable('ai_chat_logs');
+    }
+
+    private function normalizeLegacyBlankSessionIds(int $adminId): void
+    {
+        if ($adminId <= 0 || !$this->aiTablesReady()) {
+            return;
+        }
+
+        $hasBlankLogs = AiChatLog::query()
+            ->where('admin_id', $adminId)
+            ->where(function ($query) {
+                $query->whereNull('session_id')
+                    ->orWhere('session_id', '');
+            })
+            ->exists();
+
+        if (!$hasBlankLogs) {
+            return;
+        }
+
+        DB::transaction(function () use ($adminId) {
+            $newSessionId = (string) Str::uuid();
+
+            AiChatLog::query()
+                ->where('admin_id', $adminId)
+                ->where(function ($query) {
+                    $query->whereNull('session_id')
+                        ->orWhere('session_id', '');
+                })
+                ->update([
+                    'session_id' => $newSessionId,
+                ]);
+
+            if (Schema::hasTable('ai_chat_session_memories')) {
+                AiChatSessionMemory::query()
+                    ->where('admin_id', $adminId)
+                    ->where(function ($query) {
+                        $query->whereNull('session_id')
+                            ->orWhere('session_id', '');
+                    })
+                    ->update([
+                        'session_id' => $newSessionId,
+                    ]);
+            }
+        });
     }
 
     /**

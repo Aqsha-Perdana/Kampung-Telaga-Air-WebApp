@@ -127,6 +127,8 @@
                                     <img src="{{ asset('storage/' . $boat->foto) }}" 
                                          alt="{{ $boat->nama }}" 
                                          class="rounded shadow-sm" 
+                                         loading="lazy"
+                                         decoding="async"
                                          style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;"
                                          data-bs-toggle="tooltip"
                                          title="Klik untuk memperbesar">
@@ -177,7 +179,7 @@
                                     <form action="{{ route('boats.destroy', $boat) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this boat {{ $boat->nama }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('boats.destroy', $boat) }}', itemLabel: @js($boat->nama), title: 'Delete Boat?', html: 'This will permanently delete <strong>' + @js($boat->nama) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -235,6 +237,8 @@
                             <img src="{{ asset('storage/' . $boat->foto) }}" 
                                  class="card-img-top" 
                                  alt="{{ $boat->nama }}"
+                                 loading="lazy"
+                                 decoding="async"
                                  style="height: 200px; object-fit: cover;">
                         @else
                             <div class="bg-light d-flex align-items-center justify-content-center" 
@@ -300,7 +304,7 @@
                                 <form action="{{ route('boats.destroy', $boat) }}" 
                                       method="POST" 
                                       class="d-inline w-50"
-                                      onsubmit="return confirm('Are you sure you want to delete this boat {{ $boat->nama }}?')">
+                                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('boats.destroy', $boat) }}', itemLabel: @js($boat->nama), title: 'Delete Boat?', html: 'This will permanently delete <strong>' + @js($boat->nama) + '</strong>. This action cannot be undone.' });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">

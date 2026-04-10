@@ -27,28 +27,28 @@
       </div>
     </div>
     
-    <!-- Active Tour Packages Card -->
+    <!-- Company Profit Card -->
   <div class="col-lg-3 col-md-6">
       <div class="card-modern animate-fade-in-up" style="animation-delay: 0.1s;">
         <div class="card-body p-4">
           <div class="d-flex align-items-center mb-3">
             <div class="flex-shrink-0">
               <div class="icon-box-modern bg-gradient-success-soft">
-                <i class="ti ti-package"></i>
+                <i class="ti ti-chart-bar"></i>
               </div>
             </div>
             <div class="ms-3">
-              <h6 class="stat-label">Active Packages</h6>
+              <h6 class="stat-label">Company Profit</h6>
             </div>
           </div>
           <div>
-            <h3 class="stat-value">{{ $resourceMetrics['packages']['total'] }}</h3>
+            <h3 class="stat-value">{{ format_ringgit($companyProfitThisMonth ?? 0) }}</h3>
             <div class="d-flex align-items-center mt-2">
-              <span class="badge bg-success-subtle text-success badge-modern me-2">
-                {{ $resourceMetrics['packages']['distribution_score'] }}% Dist
+              <span class="badge {{ ($companyProfitGrowth ?? 0) >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }} badge-modern me-2">
+                {{ ($companyProfitGrowth ?? 0) >= 0 ? '↑' : '↓' }} {{ number_format(abs($companyProfitGrowth ?? 0), 1) }}%
               </span>
               <span class="text-muted small">
-                {{ $resourceMetrics['packages']['sold'] }} Sold / {{ $resourceMetrics['packages']['unsold'] }} Avail
+                Profit for the period this month
               </span>
             </div>
           </div>
@@ -71,21 +71,12 @@
             </div>
           </div>
           <div>
-            @php
-              // Fallback Calculation to match original logic exactly
-              $totalParticipants = $packageSales->sum('total_participants');
-              $thisMonthParticipants = DB::table('order_items')
-                ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-                ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-                ->where('orders.created_at', '>=', Carbon\Carbon::now()->startOfMonth())
-                ->sum('order_items.jumlah_peserta');
-            @endphp
-            <h3 class="stat-value">{{ number_format($totalParticipants) }}</h3>
+            <h3 class="stat-value">{{ number_format($totalParticipants ?? 0) }}</h3>
             <div class="d-flex align-items-center mt-2">
               <span class="badge bg-warning-subtle text-warning badge-modern me-2">
                 All Time
               </span>
-              <span class="text-muted small">+{{ number_format($thisMonthParticipants) }} this month</span>
+              <span class="text-muted small">+{{ number_format($thisMonthParticipants ?? 0) }} this month</span>
             </div>
           </div>
         </div>
@@ -107,16 +98,7 @@
             </div>
           </div>
           <div>
-            @php
-              $paidOrders = DB::table('orders')->where('status', 'paid')->count();
-              $avgOrderValue = $paidOrders > 0 ? $totalRevenue / $paidOrders : 0;
-              $thisMonthOrders = DB::table('orders')
-                ->where('status', 'paid')
-                ->where('created_at', '>=', Carbon\Carbon::now()->startOfMonth())
-                ->count();
-              $avgThisMonth = $thisMonthOrders > 0 ? $revenueThisMonth / $thisMonthOrders : 0;
-            @endphp
-            <h3 class="stat-value">{{ format_ringgit($avgOrderValue) }}</h3>
+            <h3 class="stat-value">{{ format_ringgit($avgOrderValue ?? 0) }}</h3>
             <div class="d-flex align-items-center mt-2">
               <span class="badge {{ ($avgOrderValueThisMonth ?? 0) >= ($avgOrderValue ?? 0) ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }} badge-modern me-2">
                 {{ ($avgOrderValueThisMonth ?? 0) >= ($avgOrderValue ?? 0) ? '↑' : '↓' }} 

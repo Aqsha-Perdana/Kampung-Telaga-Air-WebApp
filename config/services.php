@@ -39,6 +39,14 @@ return [
         ],
     ],
 
+    'xendit' => [
+        'secret_key' => env('XENDIT_SECRET_KEY'),
+        'webhook_token' => env('XENDIT_WEBHOOK_TOKEN'),
+        'base_url' => env('XENDIT_BASE_URL', 'https://api.xendit.co'),
+        'public_url' => env('XENDIT_PUBLIC_URL', env('APP_URL', 'http://localhost')),
+        'webhook_url' => env('XENDIT_WEBHOOK_URL'),
+    ],
+
     // Exchange Rate API Configuration
     'exchangerate' => [
         'key' => env('EXCHANGERATE_API_KEY', ''), // Optional, free tier doesn't need key

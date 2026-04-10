@@ -127,6 +127,8 @@
                                                 <img src="{{ asset('storage/'.$foto->foto) }}" 
                                                      alt="{{ $kiosk->nama }}" 
                                                      class="rounded shadow-sm" 
+                                                     loading="lazy"
+                                                     decoding="async"
                                                      style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
                                                      data-bs-toggle="tooltip"
                                                      title="Klik untuk memperbesar">
@@ -177,7 +179,7 @@
                                     <form action="{{ route('kiosks.destroy', $kiosk) }}" 
                                           method="POST" 
                                           class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this kiosk {{ $kiosk->nama }}? Data yang dihapus tidak dapat dikembalikan!')">
+                                          onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('kiosks.destroy', $kiosk) }}', itemLabel: @js($kiosk->nama), title: 'Delete Kiosk?', html: 'This will permanently delete <strong>' + @js($kiosk->nama) + '</strong>. This action cannot be undone.' });">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
@@ -239,6 +241,8 @@
                                         <img src="{{ asset('storage/'.$foto->foto) }}" 
                                              class="d-block w-100" 
                                              alt="{{ $kiosk->nama }}"
+                                             loading="lazy"
+                                             decoding="async"
                                              style="height: 250px; object-fit: cover;">
                                     </div>
                                     @endforeach
@@ -259,10 +263,10 @@
                         @endif
                         
                         <!-- Photo Count Badge -->
-                        @if($kiosk->fotos->count() > 0)
+                        @if(($kiosk->fotos_count ?? $kiosk->fotos->count()) > 0)
                         <div class="position-absolute top-0 end-0 m-3">
                             <span class="badge bg-dark bg-opacity-75 shadow-sm">
-                                <i class="bi bi-camera-fill me-1"></i>{{ $kiosk->fotos->count() }} Photo
+                                <i class="bi bi-camera-fill me-1"></i>{{ $kiosk->fotos_count ?? $kiosk->fotos->count() }} Photo
                             </span>
                         </div>
                         @endif
@@ -311,7 +315,7 @@
                                 <form action="{{ route('kiosks.destroy', $kiosk) }}" 
                                       method="POST" 
                                       class="d-inline w-50"
-                                      onsubmit="return confirm('Are you sure you want to delete this kiosk {{ $kiosk->nama }}?')">
+                                      onsubmit="event.preventDefault(); adminDeleteSwal({ actionUrl: '{{ route('kiosks.destroy', $kiosk) }}', itemLabel: @js($kiosk->nama), title: 'Delete Kiosk?', html: 'This will permanently delete <strong>' + @js($kiosk->nama) + '</strong>. This action cannot be undone.' });">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">

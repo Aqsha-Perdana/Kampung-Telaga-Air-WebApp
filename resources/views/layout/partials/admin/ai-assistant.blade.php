@@ -1,11 +1,22 @@
 @php
-    $adminAiReady = \Illuminate\Support\Facades\Schema::hasTable('ai_chat_logs');
-    $adminAiPrompts = [
-        ['label' => 'Sales Trend', 'prompt' => 'bagaimana tren penjualan 7 hari terakhir dibanding 7 hari sebelumnya?'],
-        ['label' => 'Top Customer', 'prompt' => 'siapa customer paling bernilai dalam 90 hari terakhir?'],
-        ['label' => 'Finance', 'prompt' => 'ringkas kondisi keuangan 30 hari terakhir'],
-        ['label' => 'Bottleneck', 'prompt' => 'resource mana yang paling berisiko bottleneck dalam 7 hari ke depan?'],
-    ];
+    $adminAiReady = \Illuminate\Support\Facades\Cache::remember('admin-ai-widget:ready', now()->addMinutes(10), function () {
+        return \Illuminate\Support\Facades\Schema::hasTable('ai_chat_logs');
+    });
+    $adminAiPrompts = rescue(
+        fn () => app(\App\Services\AdminAIChatService::class)->promptSuggestions(),
+        [
+            ['label' => 'Sales Trend', 'prompt' => 'bagaimana tren penjualan 7 hari terakhir dibanding 7 hari sebelumnya?', 'hint' => 'Lihat perubahan performa penjualan terbaru'],
+            ['label' => 'Sales Detail', 'prompt' => 'detail tren penjualan 7 hari terakhir, termasuk order, revenue, dan peserta', 'hint' => 'Angka detail order, revenue, dan peserta'],
+            ['label' => 'Top Customer', 'prompt' => 'siapa customer paling bernilai dalam 90 hari terakhir?', 'hint' => 'Cari customer dengan kontribusi omzet terbesar'],
+            ['label' => 'Customer Contact', 'prompt' => 'siapa customer paling bernilai dalam 90 hari terakhir dan apa emailnya?', 'hint' => 'Lihat kontak customer terbaik'],
+            ['label' => 'Bottleneck', 'prompt' => 'resource mana yang paling berisiko bottleneck dalam 7 hari ke depan?', 'hint' => 'Cek kapasitas resource sebelum tanggal padat'],
+            ['label' => 'Idle Resource', 'prompt' => 'resource mana yang paling idle dalam 30 hari terakhir?', 'hint' => 'Cari resource yang jarang dipakai'],
+            ['label' => 'Profit', 'prompt' => 'paket mana yang paling profit 30 hari terakhir?', 'hint' => 'Lihat paket dengan margin terbaik'],
+            ['label' => 'Profit Total', 'prompt' => 'berapa total profit 30 hari terakhir?', 'hint' => 'Ringkasan profit keseluruhan'],
+            ['label' => 'Finance', 'prompt' => 'ringkas kondisi keuangan 30 hari terakhir', 'hint' => 'Ringkasan revenue, expense, dan net profit'],
+            ['label' => 'Refund Watch', 'prompt' => 'bagaimana status refund, order gagal, dan order dibatalkan 30 hari terakhir?', 'hint' => 'Pantau masalah refund dan pembayaran'],
+        ]
+    );
 @endphp
 
 <div
@@ -38,7 +49,12 @@
         <div class="admin-ai-panel-body">
             <div class="admin-ai-prompts" id="admin-ai-widget-prompts">
                 @foreach($adminAiPrompts as $prompt)
-                    <button type="button" class="admin-ai-prompt" data-prompt="{{ $prompt['prompt'] }}">
+                    <button
+                        type="button"
+                        class="admin-ai-prompt"
+                        data-prompt="{{ $prompt['prompt'] }}"
+                        title="{{ $prompt['hint'] ?? $prompt['prompt'] }}"
+                    >
                         <span>{{ $prompt['label'] }}</span>
                     </button>
                 @endforeach

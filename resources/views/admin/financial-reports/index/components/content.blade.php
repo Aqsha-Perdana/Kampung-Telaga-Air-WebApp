@@ -1,4 +1,18 @@
 <div class="container-fluid">
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="ti ti-check me-1"></i> {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="ti ti-alert-circle me-1"></i> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
     <!-- Header with Date Filter & Export -->
     <div class="card mb-4 report-header-card">
     <div class="card-body">
@@ -51,6 +65,104 @@
         </div>
     </div>
 </div>  
+
+    <div class="card mb-4 opening-cash-card">
+        <div class="card-body">
+            <div class="opening-cash-shell">
+                <div class="opening-cash-summary">
+                    <div class="opening-cash-meta-row">
+                        <div>
+                            <p class="opening-cash-eyebrow mb-1">Opening Cash</p>
+                            <h4 class="opening-cash-amount mb-1">{{ format_ringgit_report($cashFlow['cash_reconciliation']['opening_balance']) }}</h4>
+                            @if($cashFlow['cash_reconciliation']['opening_balance_is_manual'])
+                                <p class="opening-cash-caption mb-0">
+                                    Applied from {{ \Carbon\Carbon::parse($cashFlow['cash_reconciliation']['opening_balance_date'])->format('d M Y') }}
+                                </p>
+                            @else
+                                <p class="opening-cash-caption mb-0">No manual balance found before {{ $startDate->format('d M Y') }}</p>
+                            @endif
+                        </div>
+                        <span class="opening-cash-state {{ $cashFlow['cash_reconciliation']['opening_balance_is_manual'] ? 'is-manual' : 'is-fallback' }}">
+                            {{ $cashFlow['cash_reconciliation']['opening_balance_is_manual'] ? 'Manual' : 'Fallback' }}
+                        </span>
+                    </div>
+
+                    @if(!empty($cashFlow['cash_reconciliation']['opening_balance_notes']))
+                    <p class="opening-cash-note mb-0">{{ $cashFlow['cash_reconciliation']['opening_balance_notes'] }}</p>
+                    @endif
+
+                    @if(!$cashFlow['cash_reconciliation']['opening_balance_is_manual'])
+                    <p class="opening-cash-helper mb-0">Cash flow is still using RM 0.00 as fallback opening balance.</p>
+                    @elseif(\Carbon\Carbon::parse($cashFlow['cash_reconciliation']['opening_balance_date'])->toDateString() !== $startDate->toDateString())
+                    <p class="opening-cash-helper mb-0">The latest balance before the selected start date is being used.</p>
+                    @endif
+
+                    @if($recentOpeningBalances->isNotEmpty())
+                    <div class="opening-cash-history">
+                        @foreach($recentOpeningBalances as $balanceRecord)
+                        <span class="opening-cash-history-item">
+                            {{ $balanceRecord->balance_date->format('d M Y') }} · {{ format_ringgit_report($balanceRecord->amount) }}
+                        </span>
+                        @endforeach
+                    </div>
+                    @endif
+                </div>
+
+                <div class="opening-cash-form-wrap">
+                    <form method="POST" action="{{ route('financial-reports.opening-balance.store') }}" class="opening-cash-form">
+                        @csrf
+                        <input type="hidden" name="start_date" value="{{ request('start_date', $startDate->format('Y-m-d')) }}">
+                        <input type="hidden" name="end_date" value="{{ request('end_date', $endDate->format('Y-m-d')) }}">
+
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="small text-muted mb-1">Date</label>
+                                <input
+                                    type="date"
+                                    name="balance_date"
+                                    class="form-control form-control-sm @error('balance_date') is-invalid @enderror"
+                                    value="{{ old('balance_date', optional($currentOpeningBalanceRecord?->balance_date)->format('Y-m-d') ?? $startDate->format('Y-m-d')) }}">
+                                @error('balance_date')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="small text-muted mb-1">Amount (MYR)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    name="amount"
+                                    class="form-control form-control-sm @error('amount') is-invalid @enderror"
+                                    value="{{ old('amount', $currentOpeningBalanceRecord?->amount !== null ? number_format((float) $currentOpeningBalanceRecord->amount, 2, '.', '') : number_format((float) ($cashFlow['cash_reconciliation']['opening_balance'] ?? 0), 2, '.', '')) }}">
+                                @error('amount')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-sm btn-info text-white w-100">
+                                    <i class="ti ti-device-floppy me-1"></i>{{ $currentOpeningBalanceRecord ? 'Update' : 'Save' }}
+                                </button>
+                            </div>
+
+                            <div class="col-12">
+                                <textarea
+                                    name="notes"
+                                    rows="2"
+                                    class="form-control form-control-sm @error('notes') is-invalid @enderror"
+                                    placeholder="Optional note">{{ old('notes', $currentOpeningBalanceRecord?->notes) }}</textarea>
+                                @error('notes')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Key Performance Indicators -->
     <div class="row mb-4">
@@ -120,6 +232,10 @@
         </div>
     </div>
 
+    <div class="alert alert-light border small">
+        Profit &amp; Loss is recognized by order date for `paid`, `confirmed`, `completed`, and refunded impact. Cash Flow uses the direct method with gross customer receipts plus separate operating cash payments based on payment and refund dates.
+    </div>
+
     <!-- Tabs Navigation -->
     <ul class="nav nav-pills mb-3" role="tablist">
         <li class="nav-item">
@@ -130,6 +246,11 @@
         <li class="nav-item">
             <button class="nav-link" data-bs-toggle="pill" data-bs-target="#cash-flow">
                 <i class="ti ti-cash me-1"></i> Statement of Cash Flows
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#gateway-fee-report">
+                <i class="ti ti-credit-card-pay me-1"></i> Gateway Fee (MDR) Report
             </button>
         </li>
         <li class="nav-item">
@@ -155,8 +276,16 @@
                                 <td colspan="2"><strong>REVENUE</strong></td>
                             </tr>
                             <tr>
-                                <td class="ps-4">Tour Package Sales</td>
-                                <td class="text-end">{{ format_ringgit_report($profitLoss['revenue']['tour_package_sales']) }}</td>
+                                <td class="ps-4">Gross Tour Package Sales</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['revenue']['gross_tour_package_sales']) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Less: Sales Discounts</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($profitLoss['revenue']['sales_discounts']) }})</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">Net Tour Package Sales</td>
+                                <td class="text-end">{{ format_ringgit_report($profitLoss['revenue']['net_tour_package_sales']) }}</td>
                             </tr>
                             <tr>
                                 <td class="ps-4">Other Revenue</td>
@@ -230,6 +359,9 @@
                             </tr>
                         </tbody>
                     </table>
+                    <div class="alert alert-light border small mt-2">
+                        Revenue is presented as gross package sales less sales discounts. Gateway fee (MDR) is shown separately under operating expenses.
+                    </div>
 
                     <!-- Operating Profit -->
                     <table class="table table-sm mt-3">
@@ -351,42 +483,195 @@
                     <h6 class="mt-4 mb-3 fw-bold">Detailed Transaction Impact</h6>
                     <div class="table-responsive">
                         <table class="table table-hover table-sm">
-                            <thead class="table-light">
-                                <tr>
+                                <thead class="table-light">
+                                  <tr>
                                     <th>Order ID</th>
                                     <th>Customer</th>
                                     <th>Date</th>
                                     <th class="text-center">Status</th>
-                                    <th class="text-end">Revenue</th>
+                                    <th class="text-end">Gross Sales</th>
+                                    <th class="text-end">Discount</th>
+                                    <th class="text-end">Net Revenue</th>
                                     <th class="text-end">Cost of Sales</th>
+                                    <th class="text-end">Gateway Fee (MDR)</th>
                                     <th class="text-end">Other Income</th>
                                     <th class="text-end">Net Impact</th>
                                     <th class="text-center">Currency</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($profitLoss['revenue_breakdown'] as $order)
+                                @forelse($profitLoss['revenue_breakdown'] as $order)
                                 <tr>
                                     <td><span class="badge bg-primary">{{ $order['order_id'] }}</span></td>
                                     <td>{{ $order['customer'] }}</td>
                                     <td>{{ \Carbon\Carbon::parse($order['date'])->format('d M Y') }}</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-{{ $order['status'] === 'refunded' ? 'dark' : 'success' }}">
-                                            {{ ucwords(str_replace('_', ' ', $order['status'])) }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end">{{ format_ringgit_report($order['revenue']) }}</td>
-                                    <td class="text-end text-danger">{{ format_ringgit_report($order['cost_of_sales']) }}</td>
-                                    <td class="text-end text-info">{{ format_ringgit_report($order['other_income'] ?? 0) }}</td>
+                                      <td class="text-center">
+                                          <span class="badge bg-{{ $order['status'] === 'refunded' ? 'dark' : 'success' }}">
+                                              {{ ucwords(str_replace('_', ' ', $order['status'])) }}
+                                          </span>
+                                      </td>
+                                      <td class="text-end">{{ format_ringgit_report($order['gross_revenue'] ?? 0) }}</td>
+                                      <td class="text-end text-danger">({{ format_ringgit_report($order['sales_discount'] ?? 0) }})</td>
+                                      <td class="text-end">{{ format_ringgit_report($order['net_revenue'] ?? $order['revenue'] ?? 0) }}</td>
+                                      <td class="text-end text-danger">{{ format_ringgit_report($order['cost_of_sales']) }}</td>
+                                      <td class="text-end text-danger">{{ format_ringgit_report($order['gateway_fee'] ?? 0) }}</td>
+                                      <td class="text-end text-info">{{ format_ringgit_report($order['other_income'] ?? 0) }}</td>
                                     <td class="text-end fw-semibold {{ ($order['net_profit_impact'] ?? 0) >= 0 ? 'text-success' : 'text-danger' }}">{{ format_ringgit_report($order['net_profit_impact'] ?? 0) }}</td>
                                     <td class="text-center">
                                         <span class="badge bg-secondary">{{ $order['currency_info']['display_currency'] ?: 'MYR' }}</span>
                                     </td>
                                 </tr>
-                                @endforeach
+                                @empty
+                                <tr>
+                                    <td colspan="10" class="text-center text-muted py-4">No transaction impact data for this period.</td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
+                    @if(isset($impactPaginator) && $impactPaginator->hasPages())
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
+                            <small class="text-muted">
+                                Showing {{ $impactPaginator->firstItem() }}-{{ $impactPaginator->lastItem() }} of {{ $impactPaginator->total() }} transactions
+                            </small>
+                            {{ $impactPaginator->onEachSide(1)->links() }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="gateway-fee-report">
+            @php
+                $mdrReport = $profitLoss['operating_expenses']['payment_gateway_fee_report'] ?? null;
+            @endphp
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 fw-bold">Gateway Fee (MDR) Report</h5>
+                    <small class="text-muted">For the period from {{ \Carbon\Carbon::parse($startDate)->format('d F Y') }} to {{ \Carbon\Carbon::parse($endDate)->format('d F Y') }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-light border small">
+                        This report groups gateway fee deductions by payment gateway and payment type, using the same recognized-order basis as the Profit &amp; Loss statement.
+                    </div>
+
+                    @if(($mdrReport['transaction_count'] ?? 0) > 0)
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100 bg-white">
+                                    <small class="text-muted d-block mb-1">Total Gateway Fee (MDR)</small>
+                                    <div class="fw-bold text-danger fs-5">{{ format_ringgit_report($mdrReport['fee_amount']) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100 bg-white">
+                                    <small class="text-muted d-block mb-1">Gross Amount Affected</small>
+                                    <div class="fw-bold fs-5">{{ format_ringgit_report($mdrReport['gross_amount']) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100 bg-white">
+                                    <small class="text-muted d-block mb-1">Transactions with Gateway Fee</small>
+                                    <div class="fw-bold fs-5">{{ $mdrReport['transaction_count'] }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 h-100 bg-white">
+                                    <small class="text-muted d-block mb-1">Average Gateway Fee Rate</small>
+                                    <div class="fw-bold fs-5">{{ number_format($mdrReport['average_fee_rate'] ?? 0, 2) }}%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            @foreach(($mdrReport['source_summary'] ?? []) as $source => $count)
+                                <span class="badge {{ gateway_fee_source_badge_class($source) }} border-0">
+                                    {{ gateway_fee_source_label($source) }}: {{ $count }}
+                                </span>
+                            @endforeach
+                        </div>
+
+                        <div class="alert alert-warning-subtle border small mb-4">
+                            Values marked as <strong>Estimated</strong> are derived from configured gateway MDR rules when the gateway did not return final fee data yet.
+                        </div>
+
+                        <div class="accordion" id="mdrBreakdownAccordion">
+                            @foreach(($mdrReport['methods'] ?? []) as $method)
+                                <div class="accordion-item border rounded-3 mb-3 overflow-hidden">
+                                    <h2 class="accordion-header" id="mdrHeading{{ $loop->index }}">
+                                        <button class="accordion-button {{ $loop->first ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#mdrCollapse{{ $loop->index }}" aria-expanded="{{ $loop->first ? 'true' : 'false' }}" aria-controls="mdrCollapse{{ $loop->index }}">
+                                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center w-100 me-3 gap-2">
+                                                <div>
+                                                    <div class="fw-semibold">{{ $method['method_label'] }}</div>
+                                                    <div class="text-muted small">{{ $method['transaction_count'] }} transaction{{ $method['transaction_count'] > 1 ? 's' : '' }} with gateway fee</div>
+                                                </div>
+                                                <div class="d-flex flex-wrap gap-3 small">
+                                                    <span><span class="text-muted">Gross</span> <strong>{{ format_ringgit_report($method['gross_amount']) }}</strong></span>
+                                                    <span><span class="text-muted">Gateway Fee</span> <strong class="text-danger">{{ format_ringgit_report($method['fee_amount']) }}</strong></span>
+                                                    <span><span class="text-muted">Avg</span> <strong>{{ number_format($method['average_fee_rate'], 2) }}%</strong></span>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="mdrCollapse{{ $loop->index }}" class="accordion-collapse collapse {{ $loop->first ? 'show' : '' }}" aria-labelledby="mdrHeading{{ $loop->index }}" data-bs-parent="#mdrBreakdownAccordion">
+                                        <div class="accordion-body bg-light-subtle">
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                @foreach(($method['source_summary'] ?? []) as $source => $count)
+                                                    <span class="badge {{ gateway_fee_source_badge_class($source) }} border-0">
+                                                        {{ gateway_fee_source_label($source) }}: {{ $count }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Payment Type</th>
+                                                            <th class="text-center">Transactions</th>
+                                                            <th class="text-end">Gross</th>
+                                                            <th class="text-end">Gateway Fee</th>
+                                                            <th class="text-end">Avg Rate</th>
+                                                            <th class="text-end">Net Settlement</th>
+                                                            <th>Source Mix</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach(($method['channels'] ?? []) as $channel)
+                                                            <tr>
+                                                                <td>
+                                                                    <div class="fw-medium">{{ $channel['descriptor'] }}</div>
+                                                                    <div class="text-muted small">{{ $channel['channel_label'] === '-' ? 'Type not captured' : 'Channel: ' . $channel['channel_label'] }}</div>
+                                                                </td>
+                                                                <td class="text-center">{{ $channel['transaction_count'] }}</td>
+                                                                <td class="text-end">{{ format_ringgit_report($channel['gross_amount']) }}</td>
+                                                                <td class="text-end text-danger">{{ format_ringgit_report($channel['fee_amount']) }}</td>
+                                                                <td class="text-end">{{ number_format($channel['average_fee_rate'], 2) }}%</td>
+                                                                <td class="text-end">{{ format_ringgit_report($channel['net_amount']) }}</td>
+                                                                <td>
+                                                                    <div class="d-flex flex-wrap gap-1">
+                                                                        @foreach(($channel['source_summary'] ?? []) as $source => $count)
+                                                                            <span class="badge {{ gateway_fee_source_badge_class($source) }} border-0">
+                                                                                {{ gateway_fee_source_label($source) }}: {{ $count }}
+                                                                            </span>
+                                                                        @endforeach
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center text-muted py-5">
+                            <i class="ti ti-credit-card-off fs-3 d-block mb-2 opacity-50"></i>
+                            No gateway fee data available for this period.
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -406,15 +691,19 @@
                                 <td colspan="2"><strong>CASH FLOWS FROM OPERATING ACTIVITIES</strong></td>
                             </tr>
                             <tr class="table-light">
-                                <td class="ps-4"><strong>Cash Receipts from Customers</strong></td>
+                                <td class="ps-4"><strong>Cash Receipts from Customers (gross, net of sales discounts)</strong></td>
                                 <td class="text-end fw-bold">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['from_customers']) }}</td>
                             </tr>
                             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
                             <tr>
-                                <td class="ps-5 text-muted small">via {{ $method === 'stripe' ? 'Credit/Debit Card (Stripe)' : ucfirst($method) }} ({{ $data['count'] }} transactions)</td>
-                                <td class="text-end text-muted small">{{ format_ringgit_report($data['amount']) }}</td>
+                                <td class="ps-5 text-muted small">via {{ payment_method_label($method) }} ({{ $data['count'] }} transactions)</td>
+                                <td class="text-end text-muted small">Gross {{ format_ringgit_report($data['gross_amount']) }}, Net {{ format_ringgit_report($data['net_amount']) }}</td>
                             </tr>
                             @endforeach
+                            <tr>
+                                <td class="ps-5 text-muted">Net settlement reference after gateway charges</td>
+                                <td class="text-end text-muted">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['net_settlement_reference']) }}</td>
+                            </tr>
                             
                             <tr class="table-light mt-3">
                                 <td class="ps-4"><strong>Cash Payments</strong></td>
@@ -431,6 +720,10 @@
                             </tr>
                             @endforeach
                             <tr>
+                                <td class="ps-5">Payment Gateway Fees</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['operating_activities']['cash_payments']['payment_gateway_fees']) }})</td>
+                            </tr>
+                            <tr>
                                 <td class="ps-5">
                                     Refunds to Customers
                                     <span class="text-muted small">({{ $cashFlow['operating_activities']['cash_payments']['refund_transactions'] }} transactions)</span>
@@ -440,6 +733,10 @@
                             <tr>
                                 <td class="ps-5">Operating Expenses</td>
                                 <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['operating_activities']['cash_payments']['operating_expenses']) }})</td>
+                            </tr>
+                            <tr class="fw-bold border-top">
+                                <td class="ps-4">Total Cash Payments</td>
+                                <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['operating_activities']['cash_payments']['total_cash_payments']) }})</td>
                             </tr>
                             
                             <tr class="table-success fw-bold border-top">
@@ -542,7 +839,7 @@
                                 <h5 class="mb-0">{{ $cashFlow['statistics']['total_transactions'] }}</h5>
                             </div>
                             <div class="col-md-6">
-                                <p class="mb-1 small text-muted">Average Transaction Value</p>
+                                <p class="mb-1 small text-muted">Average Gross Customer Receipt</p>
                                 <h5 class="mb-0">{{ format_ringgit_report($cashFlow['statistics']['average_transaction_value']) }}</h5>
                             </div>
                         </div>
@@ -705,5 +1002,3 @@
         </div>
     </div>
 </div>
-
-

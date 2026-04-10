@@ -151,6 +151,7 @@
                                      style="object-fit: cover;" 
                                      alt="{{ $kiosk->nama }}"
                                      loading="lazy"
+                                     decoding="async"
                                      onerror="this.onerror=null; this.src='{{ asset('assets/images/default-kiosk.jpg') }}';">
                             @else
                                 <div class="h-100 w-100 d-flex align-items-center justify-content-center" 
@@ -170,9 +171,9 @@
                             @endif
 
                             <!-- Badge Foto Count -->
-                            @if($kiosk->fotos->count() > 1)
+                            @if(($kiosk->fotos_count ?? 0) > 1)
                             <span class="position-absolute bottom-0 end-0 m-3 badge bg-dark bg-opacity-75">
-                                <i class="bi bi-images"></i> {{ $kiosk->fotos->count() }} Photo
+                                <i class="bi bi-images"></i> {{ $kiosk->fotos_count }} Photo
                             </span>
                             @endif
                         </div>
@@ -193,7 +194,7 @@
                                 @endif
                                 <div class="d-flex align-items-center text-muted small">
                                     <i class="bi bi-images me-2"></i>
-                                    <span>{{ $kiosk->fotos->count() }} Product Photo</span>
+                                    <span>{{ $kiosk->fotos_count ?? 0 }} Product Photo</span>
                                 </div>
                             </div>
 
@@ -266,33 +267,4 @@
     </section>
 </div>
 
-<style>
-.hover-lift {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.hover-lift:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-}
-
-.kiosk-card .card-img-top {
-    transition: transform 0.3s ease;
-}
-
-.kiosk-card:hover .card-img-top {
-    transform: scale(1.1);
-}
-
-.info-card {
-    padding: 30px 20px;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-}
-
-.info-card:hover {
-    background: white;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-}
-</style>
 @endsection
