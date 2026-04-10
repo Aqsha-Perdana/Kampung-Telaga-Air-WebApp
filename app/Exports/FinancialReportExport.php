@@ -68,6 +68,9 @@ class ProfitLossSheet implements FromCollection, WithTitle, WithHeadings, WithSt
     public function collection()
     {
         $revenue = (float) ($this->profitLoss['revenue']['total_revenue'] ?? 0);
+        $grossTourPackageSales = (float) ($this->profitLoss['revenue']['gross_tour_package_sales'] ?? 0);
+        $salesDiscounts = (float) ($this->profitLoss['revenue']['sales_discounts'] ?? 0);
+        $netTourPackageSales = (float) ($this->profitLoss['revenue']['net_tour_package_sales'] ?? 0);
         $grossProfit = (float) ($this->profitLoss['gross_profit']['amount'] ?? 0);
         $operatingProfit = (float) ($this->profitLoss['operating_profit']['amount'] ?? 0);
         $operatingExpenses = (float) ($this->profitLoss['operating_expenses']['total_operating_expenses'] ?? 0);
@@ -77,10 +80,17 @@ class ProfitLossSheet implements FromCollection, WithTitle, WithHeadings, WithSt
         $profitBeforeTax = (float) ($this->profitLoss['profit_before_tax']['amount'] ?? 0);
         $taxExpense = (float) ($this->profitLoss['tax_expense']['total_tax'] ?? 0);
         $netProfit = (float) ($this->profitLoss['profit_for_period']['amount'] ?? 0);
+        $operatingExpenseRows = collect($this->profitLoss['operating_expenses']['by_nature'] ?? [])
+            ->map(fn ($data, $category) => [
+                '  ' . $category,
+                '(' . number_format((float) ($data['amount'] ?? 0), 2) . ')',
+            ]);
 
         return collect([
             ['REVENUE', ''],
-            ['  Tour Package Sales', number_format((float) ($this->profitLoss['revenue']['tour_package_sales'] ?? 0), 2)],
+            ['  Gross Tour Package Sales', number_format($grossTourPackageSales, 2)],
+            ['  Less: Sales Discounts', '(' . number_format($salesDiscounts, 2) . ')'],
+            ['  Net Tour Package Sales', number_format($netTourPackageSales, 2)],
             ['  Other Revenue', number_format((float) ($this->profitLoss['revenue']['other_revenue'] ?? 0), 2)],
             ['Total Revenue', number_format($revenue, 2)],
             ['', ''],
@@ -95,7 +105,7 @@ class ProfitLossSheet implements FromCollection, WithTitle, WithHeadings, WithSt
             ['Gross Profit Margin %', number_format((float) ($this->profitLoss['gross_profit']['margin_percentage'] ?? 0), 2) . '%'],
             ['', ''],
             ['OPERATING EXPENSES', ''],
-            ['  Payment Gateway Fees', '(' . number_format((float) ($this->profitLoss['operating_expenses']['payment_gateway_fees'] ?? 0), 2) . ')'],
+        ])->concat($operatingExpenseRows)->concat(collect([
             ['  Total Operating Expenses', '(' . number_format($operatingExpenses, 2) . ')'],
             ['', ''],
             ['OPERATING PROFIT (EBIT)', number_format($operatingProfit, 2)],
@@ -113,7 +123,7 @@ class ProfitLossSheet implements FromCollection, WithTitle, WithHeadings, WithSt
             ['', ''],
             ['NET PROFIT FOR THE PERIOD', number_format($netProfit, 2)],
             ['Net Profit Margin %', number_format((float) ($this->profitLoss['profit_for_period']['margin_percentage'] ?? 0), 2) . '%'],
-        ]);
+        ]));
     }
 
     public function styles(Worksheet $sheet): array
@@ -123,15 +133,6 @@ class ProfitLossSheet implements FromCollection, WithTitle, WithHeadings, WithSt
             2 => ['font' => ['bold' => true, 'size' => 12]],
             3 => ['font' => ['italic' => true]],
             6 => ['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'E7E6E6']]],
-            7 => ['font' => ['bold' => true]],
-            12 => ['font' => ['bold' => true]],
-            19 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'D4EDDA']]],
-            22 => ['font' => ['bold' => true]],
-            26 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'CCE5FF']]],
-            29 => ['font' => ['bold' => true]],
-            35 => ['font' => ['bold' => true]],
-            37 => ['font' => ['bold' => true]],
-            39 => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'C3E6CB']]],
         ];
     }
 }
@@ -164,21 +165,21 @@ class CashFlowSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
 
     public function collection()
     {
-        $grossReceipts = (float) ($this->cashFlow['operating_activities']['cash_receipts']['from_customers_gross'] ?? 0);
-        $gatewayFeesWithheld = (float) ($this->cashFlow['operating_activities']['cash_receipts']['payment_gateway_fees_withheld'] ?? 0);
-        $receipts = (float) ($this->cashFlow['operating_activities']['cash_receipts']['from_customers'] ?? 0);
+        $grossReceipts = (float) ($this->cashFlow['operating_activities']['cash_receipts']['from_customers'] ?? 0);
+        $netSettlementReference = (float) ($this->cashFlow['operating_activities']['cash_receipts']['net_settlement_reference'] ?? 0);
         $paymentsSuppliers = (float) ($this->cashFlow['operating_activities']['cash_payments']['to_suppliers'] ?? 0);
+        $paymentsGatewayFees = (float) ($this->cashFlow['operating_activities']['cash_payments']['payment_gateway_fees'] ?? 0);
         $paymentsRefund = (float) ($this->cashFlow['operating_activities']['cash_payments']['refunds_to_customers'] ?? 0);
         $paymentsExpenses = (float) ($this->cashFlow['operating_activities']['cash_payments']['operating_expenses'] ?? 0);
 
         return collect([
             ['CASH FLOWS FROM OPERATING ACTIVITIES', ''],
-            ['  Gross Cash Receipts from Customers', number_format($grossReceipts, 2)],
-            ['  Less: Payment Gateway Fees Withheld', '(' . number_format($gatewayFeesWithheld, 2) . ')'],
-            ['  Net Cash Receipts from Customers', number_format($receipts, 2)],
+            ['  Cash Receipts from Customers (gross, net of sales discounts)', number_format($grossReceipts, 2)],
             ['  Cash Payments to Suppliers', '(' . number_format($paymentsSuppliers, 2) . ')'],
+            ['  Payment Gateway Fees', '(' . number_format($paymentsGatewayFees, 2) . ')'],
             ['  Refunds Paid to Customers', '(' . number_format($paymentsRefund, 2) . ')'],
             ['  Cash Payments for Operating Expenses', '(' . number_format($paymentsExpenses, 2) . ')'],
+            ['  Net Settlement Reference from Payment Gateways', number_format($netSettlementReference, 2)],
             ['Net Cash from Operating Activities', number_format((float) ($this->cashFlow['operating_activities']['net_cash_from_operating'] ?? 0), 2)],
             ['', ''],
             ['CASH FLOWS FROM INVESTING ACTIVITIES', ''],
@@ -205,13 +206,13 @@ class CashFlowSheet implements FromCollection, WithTitle, WithHeadings, WithStyl
             3 => ['font' => ['italic' => true]],
             6 => ['font' => ['bold' => true], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'E7E6E6']]],
             7 => ['font' => ['bold' => true]],
-            13 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'D4EDDA']]],
-            15 => ['font' => ['bold' => true]],
-            18 => ['font' => ['bold' => true]],
-            20 => ['font' => ['bold' => true]],
-            23 => ['font' => ['bold' => true]],
-            25 => ['font' => ['bold' => true, 'size' => 11]],
-            27 => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'C3E6CB']]],
+            14 => ['font' => ['bold' => true, 'size' => 11], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'D4EDDA']]],
+            16 => ['font' => ['bold' => true]],
+            19 => ['font' => ['bold' => true]],
+            21 => ['font' => ['bold' => true]],
+            24 => ['font' => ['bold' => true]],
+            26 => ['font' => ['bold' => true, 'size' => 11]],
+            28 => ['font' => ['bold' => true, 'size' => 12], 'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'C3E6CB']]],
         ];
     }
 }
@@ -240,7 +241,7 @@ class RevenueBreakdownSheet implements FromCollection, WithTitle, WithHeadings, 
             ['DETAILED REVENUE BREAKDOWN'],
             ['For the period from ' . $this->startDate->format('d F Y') . ' to ' . $this->endDate->format('d F Y')],
             [],
-            ['Order ID', 'Customer', 'Date', 'Revenue (MYR)', 'Cost of Sales (MYR)', 'Gateway Fee (MYR)', 'Net Impact (MYR)', 'Display Currency', 'Display Amount'],
+            ['Order ID', 'Customer', 'Date', 'Gross Sales (MYR)', 'Discount (MYR)', 'Net Revenue (MYR)', 'Cost of Sales (MYR)', 'Gateway Fee (MYR)', 'Net Impact (MYR)', 'Display Currency', 'Display Amount'],
         ];
     }
 
@@ -257,7 +258,9 @@ class RevenueBreakdownSheet implements FromCollection, WithTitle, WithHeadings, 
                     $order['order_id'] ?? '-',
                     $order['customer'] ?? '-',
                     $date,
-                    number_format((float) ($order['revenue'] ?? 0), 2),
+                    number_format((float) ($order['gross_revenue'] ?? 0), 2),
+                    number_format((float) ($order['sales_discount'] ?? 0), 2),
+                    number_format((float) ($order['net_revenue'] ?? $order['revenue'] ?? 0), 2),
                     number_format((float) ($order['cost_of_sales'] ?? 0), 2),
                     number_format((float) ($order['gateway_fee'] ?? 0), 2),
                     number_format((float) ($order['net_profit_impact'] ?? 0), 2),

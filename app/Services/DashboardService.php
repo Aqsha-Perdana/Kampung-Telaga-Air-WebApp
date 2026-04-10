@@ -2,16 +2,21 @@
 
 namespace App\Services;
 
+use App\Services\FinancialReport\FinancialStatementService;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DashboardService
 {
+    public function __construct(
+        private readonly FinancialStatementService $financialStatementService
+    ) {
+    }
+
     public function getKPIMetrics()
     {
         $now = Carbon::now();
         $thisMonth = $now->copy()->startOfMonth();
-        $startOfYear = $now->copy()->startOfYear();
         $lastMonth = $now->copy()->subMonth()->startOfMonth();
         $endOfLastMonth = $now->copy()->subMonth()->endOfMonth();
 
@@ -57,7 +62,11 @@ class DashboardService
         $completedOrders = DB::table('orders')->where('status', 'completed')->count();
         
         $ordersByStatus = DB::table('orders')
-            ->select('status', DB::raw('count(*) as count'))
+            ->select(
+                'status',
+                DB::raw('count(*) as count'),
+                DB::raw('COALESCE(SUM(total_amount), 0) as revenue')
+            )
             ->groupBy('status')
             ->get();
 
@@ -73,12 +82,24 @@ class DashboardService
             ->where('orders.created_at', '>=', $thisMonth)
             ->sum('order_items.jumlah_peserta');
 
+        // 6. Company Profit aligned with Statement of Profit or Loss
+        $companyProfitThisMonth = $this->getProfitForPeriod(
+            $thisMonth->toDateString(),
+            $now->toDateString()
+        );
+        $companyProfitLastMonth = $this->getProfitForPeriod(
+            $lastMonth->toDateString(),
+            $endOfLastMonth->toDateString()
+        );
+        $companyProfitGrowth = $this->calculateGrowthRate($companyProfitThisMonth, $companyProfitLastMonth);
+
         return compact(
             'totalRevenue', 'revenueThisMonth', 'revenueLastMonth', 'revenueGrowth',
             'avgOrderValue', 'avgOrderValueThisMonth', 'avgOrderGrowth',
             'totalOrders', 'ordersThisMonth', 'ordersGrowth',
             'pendingPayments', 'completedOrders', 'ordersByStatus',
-            'totalParticipants', 'thisMonthParticipants'
+            'totalParticipants', 'thisMonthParticipants',
+            'companyProfitThisMonth', 'companyProfitLastMonth', 'companyProfitGrowth'
         );
     }
 
@@ -492,5 +513,21 @@ class DashboardService
             'neverSoldBoats' => $neverSoldBoats,
             'neverSoldHomestays' => $neverSoldHomestays,
         ];
+    }
+
+    private function getProfitForPeriod(string $startDate, string $endDate): float
+    {
+        $profitLoss = $this->financialStatementService->getProfitLoss($startDate, $endDate);
+
+        return (float) ($profitLoss['profit_for_period']['amount'] ?? 0);
+    }
+
+    private function calculateGrowthRate(float $currentValue, float $previousValue): float
+    {
+        if (abs($previousValue) < 0.00001) {
+            return 0.0;
+        }
+
+        return (($currentValue - $previousValue) / abs($previousValue)) * 100;
     }
 }

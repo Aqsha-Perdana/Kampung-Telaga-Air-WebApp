@@ -53,8 +53,8 @@
         <tbody>
             <tr class="section-header"><td colspan="2">CASH FLOWS FROM OPERATING ACTIVITIES</td></tr>
             <tr>
-                <td class="indent-1">Gross Cash Receipts from Customers</td>
-                <td class="text-right">{{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers_gross'], 2) }}</td>
+                <td class="indent-1">Cash Receipts from Customers (gross, net of sales discounts)</td>
+                <td class="text-right">{{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers'], 2) }}</td>
             </tr>
             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
             <tr>
@@ -63,16 +63,16 @@
             </tr>
             @endforeach
             <tr>
-                <td class="indent-1">Less: Payment Gateway Fees Withheld</td>
-                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_receipts']['payment_gateway_fees_withheld'], 2) }})</td>
-            </tr>
-            <tr>
-                <td class="indent-1">Net Cash Receipts from Customers</td>
-                <td class="text-right">{{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers'], 2) }}</td>
+                <td class="indent-1">Net Settlement Reference after Gateway Charges</td>
+                <td class="text-right">{{ number_format($cashFlow['operating_activities']['cash_receipts']['net_settlement_reference'], 2) }}</td>
             </tr>
             <tr>
                 <td class="indent-1">Cash Payments to Suppliers & Service Providers</td>
                 <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['to_suppliers'], 2) }})</td>
+            </tr>
+            <tr>
+                <td class="indent-1">Payment Gateway Fees</td>
+                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['payment_gateway_fees'], 2) }})</td>
             </tr>
             <tr>
                 <td class="indent-1">Refunds Paid to Customers ({{ $cashFlow['operating_activities']['cash_payments']['refund_transactions'] }} transactions)</td>
@@ -84,7 +84,7 @@
             </tr>
             <tr>
                 <td class="indent-1">Total Cash Payments</td>
-                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['to_suppliers'] + $cashFlow['operating_activities']['cash_payments']['refunds_to_customers'] + $cashFlow['operating_activities']['cash_payments']['operating_expenses'], 2) }})</td>
+                <td class="text-right text-danger">({{ number_format($cashFlow['operating_activities']['cash_payments']['total_cash_payments'], 2) }})</td>
             </tr>
             <tr class="highlight-row">
                 <td>Net Cash from Operating Activities</td>
@@ -164,7 +164,7 @@
     <div class="insight-section no-break">
         <b>💡 CASH FLOW INSIGHTS:</b> 
         Liquidity for this period shows a trend {{ $cashFlow['cash_summary']['net_increase_in_cash'] >= 0 ? 'POSITIF' : 'NEGATIF' }}. 
-        Operating activities contributed {{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers'] > 0 ? ($cashFlow['operating_activities']['net_cash_from_operating'] / $cashFlow['operating_activities']['cash_receipts']['from_customers']) * 100 : 0, 1) }}% cash efficiency from total customer receipts. 
+        Operating activities contributed {{ number_format($cashFlow['operating_activities']['cash_receipts']['from_customers'] > 0 ? ($cashFlow['operating_activities']['net_cash_from_operating'] / $cashFlow['operating_activities']['cash_receipts']['from_customers']) * 100 : 0, 1) }}% net operating cash efficiency from gross customer receipts. 
         Closing cash balance of RM {{ number_format($cashFlow['cash_reconciliation']['closing_balance'], 2) }} available for the next operational period.
     </div>
 

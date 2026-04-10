@@ -7,11 +7,16 @@ use App\Exports\OwnerReportExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FinancialReport\OwnerReportRequest;
 use App\Http\Requests\Admin\FinancialReport\ReportPeriodRequest;
+use App\Http\Requests\Admin\FinancialReport\StoreCashOpeningBalanceRequest;
+use App\Models\CashOpeningBalance;
 use App\Services\FinancialReport\FinancialStatementService;
 use App\Services\FinancialReport\OwnerReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class FinancialReportController extends Controller
@@ -28,10 +33,15 @@ class FinancialReportController extends Controller
     public function index(ReportPeriodRequest $request)
     {
         [$startDate, $endDate] = $this->resolvePeriod($request);
+        $hasOpeningBalanceTable = Schema::hasTable('cash_opening_balances');
+        $openingBalanceVersion = $hasOpeningBalanceTable
+            ? (string) (DB::table('cash_opening_balances')->max('updated_at') ?? 'none')
+            : 'table_missing';
 
-        $cacheKey = 'admin.financial.index.v1.' . md5(json_encode([
+        $cacheKey = 'admin.financial.index.v5.' . md5(json_encode([
             'start' => $startDate->toDateString(),
             'end' => $endDate->toDateString(),
+            'opening_balance_version' => $openingBalanceVersion,
         ]));
 
         $payload = Cache::remember($cacheKey, now()->addSeconds(45), function () use ($startDate, $endDate) {
@@ -45,14 +55,65 @@ class FinancialReportController extends Controller
         $profitLoss = $payload['profitLoss'];
         $cashFlow = $payload['cashFlow'];
         $ownerSummary = $payload['ownerSummary'];
+        $currentOpeningBalanceRecord = $hasOpeningBalanceTable
+            ? CashOpeningBalance::query()->whereDate('balance_date', $startDate->toDateString())->first()
+            : null;
+        $recentOpeningBalances = $hasOpeningBalanceTable
+            ? CashOpeningBalance::query()->orderByDesc('balance_date')->limit(5)->get()
+            : collect();
+        $impactPaginator = $this->paginateArray(
+            collect($profitLoss['revenue_breakdown'] ?? [])
+                ->sortByDesc(function ($order) {
+                    return data_get($order, 'date');
+                })
+                ->values()
+                ->all(),
+            10,
+            'impact_page',
+            'profit-loss'
+        );
+        $profitLoss['revenue_breakdown'] = $impactPaginator->items();
 
         return view('admin.financial-reports.index', compact(
             'profitLoss',
             'cashFlow',
             'ownerSummary',
+            'currentOpeningBalanceRecord',
+            'recentOpeningBalances',
             'startDate',
-            'endDate'
+            'endDate',
+            'impactPaginator'
         ));
+    }
+
+    public function storeOpeningBalance(StoreCashOpeningBalanceRequest $request)
+    {
+        $validated = $request->validated();
+
+        if (!Schema::hasTable('cash_opening_balances')) {
+            return redirect()
+                ->route('financial-reports.index', array_filter([
+                    'start_date' => $validated['start_date'] ?? null,
+                    'end_date' => $validated['end_date'] ?? null,
+                ]))
+                ->with('error', 'Opening cash table is not ready yet. Please run the latest migration first.');
+        }
+
+        CashOpeningBalance::query()->updateOrCreate(
+            ['balance_date' => $validated['balance_date']],
+            [
+                'amount' => $validated['amount'],
+                'notes' => $validated['notes'] ?? null,
+                'created_by' => auth('admin')->id(),
+            ]
+        );
+
+        return redirect()
+            ->route('financial-reports.index', array_filter([
+                'start_date' => $validated['start_date'] ?? null,
+                'end_date' => $validated['end_date'] ?? null,
+            ]))
+            ->with('success', 'Opening cash balance saved successfully.');
     }
 
     public function exportProfitLossPdf(ReportPeriodRequest $request)
@@ -191,5 +252,28 @@ class FinancialReportController extends Controller
     private function resolvePeriod(ReportPeriodRequest $request): array
     {
         return [$request->startDate(), $request->endDate()];
+    }
+
+    private function paginateArray(array $items, int $perPage, string $pageName, ?string $fragment = null): LengthAwarePaginator
+    {
+        $currentPage = LengthAwarePaginator::resolveCurrentPage($pageName);
+        $collection = collect($items);
+        $paginator = new LengthAwarePaginator(
+            $collection->forPage($currentPage, $perPage)->values(),
+            $collection->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => $pageName,
+                'query' => request()->query(),
+            ]
+        );
+
+        if ($fragment) {
+            $paginator->fragment($fragment);
+        }
+
+        return $paginator;
     }
 }

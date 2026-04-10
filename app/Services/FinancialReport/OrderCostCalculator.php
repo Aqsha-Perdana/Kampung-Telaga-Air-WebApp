@@ -69,22 +69,6 @@ class OrderCostCalculator
         ];
     }
 
-    public function getCostByType(iterable $orders, string $type): float
-    {
-        $total = 0.0;
-
-        foreach ($orders as $order) {
-            if (($order->status ?? null) === 'refunded') {
-                continue;
-            }
-
-            $orderCost = $this->calculateOrderCost((string) $order->id_order);
-            $total += (float) ($orderCost['breakdown'][$type]['total'] ?? 0);
-        }
-
-        return $total;
-    }
-
     private function mapItems(array $items, string $unitPriceKey, ?string $quantityKey): array
     {
         return array_map(function (array $item) use ($unitPriceKey, $quantityKey) {

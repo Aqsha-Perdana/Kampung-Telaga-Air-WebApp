@@ -181,15 +181,15 @@
                                 <tr>
                                     <td class="fw-bold">Payment Method:</td>
                                     <td>
-                                        <i class="ti ti-{{ $order->payment_method === 'xendit' ? 'wallet' : 'credit-card' }}"></i> {{ payment_method_label($order->payment_method) }}
+                                        <i class="ti ti-{{ $order->payment_method === 'xendit' ? 'wallet' : 'credit-card' }}"></i> {{ payment_descriptor($order->payment_method, $order->payment_channel) }}
                                     </td>
                                 </tr>
                                 <tr>
                                     <td class="fw-bold">Payment Channel:</td>
-                                    <td>{{ $order->payment_channel ?: '-' }}</td>
+                                    <td>{{ payment_channel_label($order->payment_channel) }}</td>
                                 </tr>
                                 <tr>
-                                    <td class="fw-bold">Gateway Fee:</td>
+                                    <td class="fw-bold">Gateway Fee (MDR):</td>
                                     <td>{{ format_ringgit($order->gateway_fee_amount ?? 0) }}</td>
                                 </tr>
                                 <tr>
@@ -198,7 +198,11 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-bold">Fee Source:</td>
-                                    <td>{{ ucfirst($order->gateway_fee_source ?? 'unknown') }}</td>
+                                    <td>
+                                        <span class="badge {{ gateway_fee_source_badge_class($order->gateway_fee_source ?? null) }} border-0">
+                                            {{ gateway_fee_source_label($order->gateway_fee_source ?? null) }}
+                                        </span>
+                                    </td>
                                 </tr>
                             </table>
                         </div>
@@ -485,7 +489,8 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Amount (MYR)</th>
-                                    <th>Gateway Fee</th>
+                                    <th>Gateway Fee (MDR)</th>
+                                    <th>Fee Source</th>
                                     <th>Net Settlement</th>
                                     <th>Currency</th>
                                     <th>Method</th>
@@ -500,12 +505,17 @@
                                     <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d M Y, H:i') }}</td>
                                     <td>{{ format_ringgit($log->amount) }}</td>
                                     <td>{{ format_ringgit($log->fee_amount ?? 0) }}</td>
+                                    <td>
+                                        <span class="badge {{ gateway_fee_source_badge_class($log->fee_source ?? null) }} border-0">
+                                            {{ gateway_fee_source_label($log->fee_source ?? null) }}
+                                        </span>
+                                    </td>
                                     <td>{{ format_ringgit($log->net_amount ?? (($log->amount ?? 0) - ($log->fee_amount ?? 0))) }}</td>
                                     <td><span class="badge bg-light text-dark">{{ strtoupper($log->currency ?? 'MYR') }}</span></td>
                                     <td>
-                                        {{ payment_method_label($log->payment_method ?? '-') }}
+                                        {{ payment_descriptor($log->payment_method ?? '-', $log->payment_channel ?? null) }}
                                     </td>
-                                    <td>{{ $log->payment_channel ?: '-' }}</td>
+                                    <td>{{ payment_channel_label($log->payment_channel) }}</td>
                                     <td>
                                         <span class="badge bg-{{ $log->status == 'success' ? 'success' : ($log->status == 'failed' ? 'danger' : 'warning') }}">
                                             {{ ucfirst($log->status) }}
@@ -794,8 +804,13 @@
                         <span class="text-danger">- RM {{ number_format($financialSummary['vendor_total'], 2) }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Payment Gateway Fee:</span>
-                        <span class="text-danger">- RM {{ number_format($financialSummary['gateway_fee'], 2) }}</span>
+                        <span class="text-muted">Gateway Fee (MDR):</span>
+                        <span class="text-danger">
+                            - RM {{ number_format($financialSummary['gateway_fee'], 2) }}
+                            <span class="badge {{ gateway_fee_source_badge_class($order->gateway_fee_source ?? null) }} border-0 ms-1">
+                                {{ gateway_fee_source_label($order->gateway_fee_source ?? null) }}
+                            </span>
+                        </span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Net Settlement Received:</span>
@@ -805,7 +820,7 @@
                     <hr class="my-3">
                     
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="h6 mb-0">Original Booking Profit Snapshot:</span>
+                        <span class="h6 mb-0">Gross Profit Before Gateway Fee (MDR):</span>
                         <h4 class="text-primary fw-bold mb-0">
                             RM {{ number_format($financialSummary['original_profit'], 2) }}
                         </h4>
@@ -823,7 +838,7 @@
                     </small>
                     @else
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                        <span class="h6 mb-0">Profit After Gateway Fee:</span>
+                        <span class="h6 mb-0">Profit After Gateway Fee (MDR):</span>
                         <h4 class="text-success fw-bold mb-0">
                             RM {{ number_format($financialSummary['reported_profit_impact'], 2) }}
                         </h4>
@@ -870,7 +885,3 @@
         </div>
     </div>
 </div>
-
-
-
-

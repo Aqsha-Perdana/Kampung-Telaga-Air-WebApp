@@ -30,7 +30,7 @@
       <ul id="sidebarnav">
         <li class="nav-small-cap">
           <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-          <span class="hide-menu">Home</span>
+          <span class="hide-menu">Overview</span>
         </li>
         <li class="sidebar-item {{ request()->is('admin/dashboard*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ url('/admin/dashboard') }}" aria-expanded="false">
@@ -40,13 +40,10 @@
             <span class="hide-menu">Dashboard</span>
           </a>
         </li>
-        <li class="sidebar-item {{ request()->routeIs('sales.*') ? 'active' : '' }}">
-          <a class="sidebar-link" href="{{ route('sales.index') }}" aria-expanded="false">
-            <span>
-              <i class="ti ti-shopping-cart"></i>
-            </span>
-            <span class="hide-menu">Sales Record</span>
-          </a>
+
+        <li class="nav-small-cap">
+          <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
+          <span class="hide-menu">Operations</span>
         </li>
         <li class="sidebar-item {{ request()->routeIs('calendar.index*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ route('calendar.index') }}" aria-expanded="false">
@@ -56,6 +53,24 @@
             <span class="hide-menu">Calendar</span>
           </a>
         </li>
+        @if($canTransaction)
+        <li class="sidebar-item {{ request()->routeIs('sales.*', 'admin.sales.*') ? 'active' : '' }}">
+          <a class="sidebar-link" href="{{ route('sales.index') }}" aria-expanded="false">
+            <span>
+              <i class="ti ti-shopping-cart"></i>
+            </span>
+            <span class="hide-menu">Sales Record</span>
+          </a>
+        </li>
+        <li class="sidebar-item {{ request()->routeIs('payment-reconciliation.*') ? 'active' : '' }}">
+          <a class="sidebar-link" href="{{ route('payment-reconciliation.index') }}" aria-expanded="false">
+            <span>
+              <i class="ti ti-alert-circle"></i>
+            </span>
+            <span class="hide-menu">Payment Exceptions</span>
+          </a>
+        </li>
+        @endif
         <li class="sidebar-item {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ $notificationsIndexPath }}" aria-expanded="false">
             <span>
@@ -63,6 +78,11 @@
             </span>
             <span class="hide-menu">Notifications</span>
           </a>
+        </li>
+
+        <li class="nav-small-cap">
+          <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
+          <span class="hide-menu">Tools</span>
         </li>
         <li class="sidebar-item {{ request()->routeIs('admin.ai-center.*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ route('admin.ai-center.index') }}" aria-expanded="false">
@@ -72,12 +92,26 @@
             <span class="hide-menu">AI Center</span>
           </a>
         </li>
-        
-        @if($canMasterData)
+
+        @if($canTransaction || $canMasterData)
         <li class="nav-small-cap">
           <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-          <span class="hide-menu">Master Data</span>
+          <span class="hide-menu">Products & Resources</span>
         </li>
+        @endif
+
+        @if($canTransaction)
+        <li class="sidebar-item {{ request()->routeIs('paket-wisata.*') ? 'active' : '' }}">
+          <a class="sidebar-link" href="{{ route('paket-wisata.index') }}" aria-expanded="false">
+            <span>
+              <i class="ti ti-package"></i>
+            </span>
+            <span class="hide-menu">Tour Package</span>
+          </a>
+        </li>
+        @endif
+
+        @if($canMasterData)
         <li class="sidebar-item {{ request()->routeIs('destinasis.*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ route('destinasis.index') }}" aria-expanded="false">
             <span>
@@ -102,7 +136,7 @@
             <span class="hide-menu">Boat</span>
           </a>
         </li>
-        <li class="sidebar-item {{ request()->routeIs('culinary.*') ? 'active' : '' }}">
+        <li class="sidebar-item {{ request()->routeIs('culinaries.*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ route('culinaries.index') }}" aria-expanded="false">
             <span>
               <i class="ti ti-tools-kitchen-2"></i>
@@ -110,20 +144,12 @@
             <span class="hide-menu">Culinary</span>
           </a>
         </li>
-        <li class="sidebar-item {{ request()->routeIs('kiosk.*') ? 'active' : '' }}">
+        <li class="sidebar-item {{ request()->routeIs('kiosks.*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ route('kiosks.index') }}" aria-expanded="false">
             <span>
               <i class="ti ti-building-store"></i>
             </span>
             <span class="hide-menu">Kiosk</span>
-          </a>
-        </li>
-        <li class="sidebar-item {{ request()->routeIs('beban-operasional.*') ? 'active' : '' }}">
-          <a class="sidebar-link" href="{{ route('beban-operasional.index') }}" aria-expanded="false">
-            <span>
-              <i class="ti ti-report-money"></i>
-            </span>
-            <span class="hide-menu">Operational Expense</span>
           </a>
         </li>
         <li class="nav-small-cap">
@@ -139,27 +165,26 @@
           </a>
         </li>
         @endif
-        
-        @if($canTransaction)
+
+        @if($canMasterData || $canFinancial)
         <li class="nav-small-cap">
           <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-          <span class="hide-menu">Manage Package</span>
+          <span class="hide-menu">Finance</span>
         </li>
-        <li class="sidebar-item {{ request()->routeIs('paketWisatas.*') ? 'active' : '' }}">
-          <a class="sidebar-link" href="{{ route('paket-wisata.index') }}" aria-expanded="false">
+        @endif
+
+        @if($canMasterData)
+        <li class="sidebar-item {{ request()->routeIs('beban-operasional.*') ? 'active' : '' }}">
+          <a class="sidebar-link" href="{{ route('beban-operasional.index') }}" aria-expanded="false">
             <span>
-              <i class="ti ti-package"></i>
+              <i class="ti ti-receipt-2"></i>
             </span>
-            <span class="hide-menu">Tour Package</span>
+            <span class="hide-menu">Operational Expense</span>
           </a>
         </li>
         @endif
-        
+
         @if($canFinancial)
-        <li class="nav-small-cap">
-          <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-          <span class="hide-menu">Financial</span>
-        </li>
         <li class="sidebar-item {{ request()->routeIs('financial-reports.*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ route('financial-reports.index') }}" aria-expanded="false">
             <span>
@@ -172,22 +197,9 @@
 
         <li class="nav-small-cap">
           <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-          <span class="hide-menu">Account</span>
+          <span class="hide-menu">Account & Access</span>
         </li>
-        <li class="sidebar-item {{ request()->routeIs('admin.profile*') ? 'active' : '' }}">
-          <a class="sidebar-link" href="{{ route('admin.profile') }}" aria-expanded="false">
-            <span>
-              <i class="ti ti-user-circle"></i>
-            </span>
-            <span class="hide-menu">Profile</span>
-          </a>
-        </li>
-
         @if($canMasterData)
-        <li class="nav-small-cap">
-          <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
-          <span class="hide-menu">User Management</span>
-        </li>
         <li class="sidebar-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
           <a class="sidebar-link" href="{{ route('admin.users.index') }}" aria-expanded="false">
             <span>
@@ -197,6 +209,14 @@
           </a>
         </li>
         @endif
+        <li class="sidebar-item {{ request()->routeIs('admin.profile*') ? 'active' : '' }}">
+          <a class="sidebar-link" href="{{ route('admin.profile') }}" aria-expanded="false">
+            <span>
+              <i class="ti ti-user-circle"></i>
+            </span>
+            <span class="hide-menu">Profile</span>
+          </a>
+        </li>
       </ul>
     </nav>
   </div>
