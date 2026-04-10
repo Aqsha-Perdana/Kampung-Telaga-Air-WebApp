@@ -14,4 +14,3 @@ window.landingLayoutConfig = {
 };
 </script>
 <script defer src="{{ asset('assets/js/landing-layout.js') }}"></script>
-<script defer src="{{ asset('assets/js/chatbot-widget.js') }}"></script>

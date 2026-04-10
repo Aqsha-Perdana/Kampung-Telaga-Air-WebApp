@@ -237,6 +237,8 @@
     padding: 16px 18px 12px;
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
     gap: 14px;
     overflow: hidden;
   }
@@ -244,7 +246,21 @@
   .admin-ai-prompts {
     display: flex;
     flex-wrap: wrap;
+    flex: 0 0 auto;
     gap: 8px;
+    max-height: 112px;
+    overflow-y: auto;
+    padding-right: 4px;
+    align-content: flex-start;
+  }
+
+  .admin-ai-prompts::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .admin-ai-prompts::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.55);
+    border-radius: 999px;
   }
 
   .admin-ai-prompt {
@@ -258,10 +274,12 @@
   }
 
   .admin-ai-chat-board {
-    min-height: 280px;
-    max-height: calc(78vh - 235px);
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 8px;
+    padding-bottom: 10px;
+    scroll-padding-bottom: 18px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -285,6 +303,7 @@
     border-radius: 18px;
     font-size: 0.85rem;
     line-height: 1.55;
+    word-break: break-word;
   }
 
   .admin-ai-bubble.assistant {
@@ -317,6 +336,7 @@
     padding: 14px 18px 18px;
     border-top: 1px solid #edf2f7;
     background: #fff;
+    flex: 0 0 auto;
   }
 
   .admin-ai-form {
@@ -557,7 +577,7 @@
 
     .admin-ai-panel {
       width: 100%;
-      max-height: 82vh;
+      max-height: min(82vh, calc(100dvh - 28px - var(--admin-ai-bottom-offset, 0px)));
     }
 
     .admin-ai-panel-actions {

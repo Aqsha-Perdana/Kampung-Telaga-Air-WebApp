@@ -7,6 +7,7 @@
     }
 
     const csrfToken = (window.adminRealtimeConfig && window.adminRealtimeConfig.csrfToken) || '';
+    const centerUrl = app.dataset.centerUrl || window.location.pathname;
     const historyUrlTemplate = app.dataset.historyUrlTemplate || '';
     const clearHistoryUrl = app.dataset.clearHistoryUrl || '';
     const chatBoard = document.getElementById('ai-chat-board');
@@ -115,11 +116,31 @@
         return historyUrlTemplate.replace('__SESSION__', encodeURIComponent(sessionId));
     }
 
+    function buildCenterUrl(sessionId) {
+        const url = new URL(centerUrl, window.location.origin);
+
+        if (sessionId) {
+            url.searchParams.set('session_id', sessionId);
+        } else {
+            url.searchParams.delete('session_id');
+        }
+
+        return url.toString();
+    }
+
+    function syncPageUrl(sessionId, nextUrl) {
+        if (!window.history || !window.history.replaceState) {
+            return;
+        }
+
+        window.history.replaceState({ sessionId: sessionId || '' }, '', nextUrl || buildCenterUrl(sessionId));
+    }
+
     function createSessionCard(session) {
-        const card = document.createElement('button');
-        card.type = 'button';
+        const card = document.createElement('a');
         card.className = 'session-card';
         card.dataset.sessionId = session.session_id;
+        card.href = buildCenterUrl(session.session_id);
         card.innerHTML =
             '<span class="session-title">' + escapeHtml(session.title || 'Admin chat session') + '</span>' +
             '<span class="session-preview">' + escapeHtml(session.preview || '') + '</span>' +
@@ -146,12 +167,13 @@
             card.querySelector('.session-title').textContent = session.title || 'Admin chat session';
             card.querySelector('.session-preview').textContent = session.preview || '';
             card.querySelector('.session-meta').textContent = (session.message_count || 0) + ' messages - ' + (session.last_activity_label || 'just now');
+            card.href = buildCenterUrl(session.session_id);
         }
 
         setActiveSession(session.session_id);
     }
 
-    function loadSessionHistory(sessionId) {
+    function loadSessionHistory(sessionId, nextUrl) {
         if (!sessionId) {
             return;
         }
@@ -172,8 +194,15 @@
                 renderMessages(data.messages || []);
                 upsertSessionCard(data.session || null);
                 renderSessionMemory(data.session_memory || null);
+                setActiveSession(sessionId);
+                syncPageUrl(sessionId, nextUrl);
             })
             .catch(function (error) {
+                if (nextUrl) {
+                    window.location.href = nextUrl;
+                    return;
+                }
+
                 clearBoard();
                 chatBoard.appendChild(buildBubble('assistant', error.message || 'Session history could not be loaded.', 'Status'));
             });
@@ -203,12 +232,13 @@
 
     if (sessionList) {
         sessionList.addEventListener('click', function (event) {
-            const target = event.target.closest('.session-card');
+            const target = event.target instanceof Element ? event.target.closest('.session-card') : null;
             if (!target) {
                 return;
             }
 
-            loadSessionHistory(target.dataset.sessionId || '');
+            event.preventDefault();
+            loadSessionHistory(target.dataset.sessionId || '', target.getAttribute('href') || '');
         });
     }
 

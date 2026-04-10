@@ -35,6 +35,5 @@
     @include('landing.partials.layout-scripts')
 
     @stack('scripts')
-    @include('components.chatbot-widget')
 </body>
 </html>

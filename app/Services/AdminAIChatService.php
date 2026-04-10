@@ -72,6 +72,11 @@ class AdminAIChatService
                 'hint' => $trendHint,
             ],
             [
+                'label' => 'Sales Detail',
+                'prompt' => 'detail tren penjualan 7 hari terakhir, termasuk order, revenue, dan peserta',
+                'hint' => 'Cocok untuk lihat angka detail performa terbaru',
+            ],
+            [
                 'label' => 'Top Customer',
                 'prompt' => 'siapa customer paling bernilai dalam 90 hari terakhir?',
                 'hint' => $topCustomer !== null
@@ -79,9 +84,19 @@ class AdminAIChatService
                     : 'Cari pelanggan dengan kontribusi omzet terbesar',
             ],
             [
+                'label' => 'Customer Contact',
+                'prompt' => 'siapa customer paling bernilai dalam 90 hari terakhir dan apa emailnya?',
+                'hint' => 'Lihat kontak customer terbaik untuk tindak lanjut',
+            ],
+            [
                 'label' => 'Bottleneck',
                 'prompt' => 'resource mana yang paling berisiko bottleneck dalam 7 hari ke depan?',
                 'hint' => 'Cocok untuk cek kapasitas sebelum tanggal padat',
+            ],
+            [
+                'label' => 'Idle Resource',
+                'prompt' => 'resource mana yang paling idle dalam 30 hari terakhir?',
+                'hint' => 'Membantu cari resource yang jarang terpakai',
             ],
             [
                 'label' => 'Profit',
@@ -89,9 +104,19 @@ class AdminAIChatService
                 'hint' => 'Lihat paket dengan margin paling sehat',
             ],
             [
+                'label' => 'Profit Total',
+                'prompt' => 'berapa total profit 30 hari terakhir?',
+                'hint' => 'Ringkasan profit keseluruhan periode terbaru',
+            ],
+            [
                 'label' => 'Finance',
                 'prompt' => 'ringkas kondisi keuangan 30 hari terakhir',
                 'hint' => 'Net profit saat ini RM ' . number_format((float) ($finance['net_profit'] ?? 0), 2),
+            ],
+            [
+                'label' => 'Refund Watch',
+                'prompt' => 'bagaimana status refund, order gagal, dan order dibatalkan 30 hari terakhir?',
+                'hint' => 'Pantau area friksi operasional dan pembayaran',
             ],
             [
                 'label' => 'AI Scope',
@@ -100,7 +125,7 @@ class AdminAIChatService
             ],
         ];
 
-        return array_slice($prompts, 0, 6);
+        return array_slice($prompts, 0, 10);
     }
 
     /**
@@ -581,41 +606,28 @@ class AdminAIChatService
     {
         $days = $this->resolveDaysFromRoute($route, 30);
         $since = Carbon::now()->subDays(max($days - 1, 0))->startOfDay();
+        $until = Carbon::now()->endOfDay();
         $periodLabel = $days . ' hari terakhir';
-        $recognizedStatuses = $this->recognizedStatuses();
         $normalized = $this->normalize($message);
         $previousContext = $this->lastAssistantContextForIntent($history, 'profit');
 
-        $bestPackage = OrderItem::query()
-            ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-            ->whereIn('orders.status', $recognizedStatuses)
-            ->where('orders.created_at', '>=', $since)
-            ->select(
-                'order_items.id_paket',
-                DB::raw('MAX(order_items.nama_paket) as nama_paket'),
-                DB::raw('SUM(order_items.subtotal) as total_revenue'),
-                DB::raw('SUM(COALESCE(order_items.company_profit_total, order_items.subtotal - COALESCE(order_items.vendor_cost_total, 0))) as total_profit'),
-                DB::raw('COUNT(DISTINCT order_items.id_order) as total_orders')
-            )
-            ->groupBy('order_items.id_paket')
-            ->orderByDesc(DB::raw('SUM(COALESCE(order_items.company_profit_total, order_items.subtotal - COALESCE(order_items.vendor_cost_total, 0)))'))
-            ->first();
+        $financeOverview = $this->financeInsightService->overview($since->toDateString(), $until->toDateString());
+        $packageProfitability = $this->packageContributionProfitability($since, $until);
+        $bestPackage = $packageProfitability[0] ?? null;
+        $profitForPeriod = (float) ($financeOverview['net_profit'] ?? 0);
+        $grossProfit = (float) ($financeOverview['gross_profit'] ?? 0);
+        $operatingExpenses = (float) ($financeOverview['operating_expenses'] ?? 0);
 
-        $totalProfit = OrderItem::query()
-            ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
-            ->whereIn('orders.status', $recognizedStatuses)
-            ->where('orders.created_at', '>=', $since)
-            ->selectRaw('SUM(COALESCE(order_items.company_profit_total, order_items.subtotal - COALESCE(order_items.vendor_cost_total, 0))) as aggregate_profit')
-            ->value('aggregate_profit') ?? 0;
-
-        if (!$bestPackage) {
+        if ($bestPackage === null) {
             return [
                 'intent' => 'profit',
-                'answer' => 'Belum ada data order yang cukup untuk menghitung paket paling profit dalam ' . $periodLabel . '.',
+                'answer' => 'Belum ada data order yang cukup untuk membaca penjualan paket dan kontribusi profitnya dalam ' . $periodLabel . '.',
                 'context' => [
                     'period_start' => $since->toDateString(),
-                    'period_end' => Carbon::now()->toDateString(),
-                    'total_profit' => (float) $totalProfit,
+                    'period_end' => $until->toDateString(),
+                    'profit_for_period' => $profitForPeriod,
+                    'gross_profit' => $grossProfit,
+                    'operating_expenses' => $operatingExpenses,
                 ],
                 'confidence' => 45.0,
                 'model' => 'internal-ops-v1',
@@ -624,19 +636,29 @@ class AdminAIChatService
 
         $context = [
             'period_start' => $since->toDateString(),
-            'period_end' => Carbon::now()->toDateString(),
-            'top_package_id' => $bestPackage->id_paket,
-            'top_package_name' => $bestPackage->nama_paket,
-            'top_package_profit' => (float) $bestPackage->total_profit,
-            'top_package_revenue' => (float) $bestPackage->total_revenue,
-            'top_package_orders' => (int) $bestPackage->total_orders,
-            'total_profit' => (float) $totalProfit,
+            'period_end' => $until->toDateString(),
+            'profit_for_period' => $profitForPeriod,
+            'gross_profit' => $grossProfit,
+            'operating_expenses' => $operatingExpenses,
+            'top_package_id' => $bestPackage['package_id'],
+            'top_package_name' => $bestPackage['package_name'],
+            'top_package_contribution_profit' => (float) $bestPackage['contribution_profit'],
+            'top_package_revenue' => (float) $bestPackage['revenue'],
+            'top_package_orders' => (int) $bestPackage['total_orders'],
+            'top_package_allocated_gateway_fee' => (float) $bestPackage['allocated_gateway_fee'],
+            'metric_reference' => 'profit_for_period_statement_of_profit_or_loss',
         ];
 
         if ($this->containsAny($normalized, ['berapa total', 'total profit', 'profit total'])) {
             return [
                 'intent' => 'profit',
-                'answer' => 'Total profit keseluruhan ' . $periodLabel . ' sekitar RM ' . number_format((float) $totalProfit, 2) . '.',
+                'answer' => sprintf(
+                    'Mengacu ke Statement of Profit or Loss, PROFIT FOR THE PERIOD untuk %s adalah RM %s. Angka ini berasal dari gross profit RM %s dikurangi total operating expenses RM %s, lalu ditambah item lain yang relevan.',
+                    $periodLabel,
+                    number_format($profitForPeriod, 2),
+                    number_format($grossProfit, 2),
+                    number_format($operatingExpenses, 2)
+                ),
                 'context' => array_merge($context, [
                     'follow_up_from' => $previousContext['intent'] ?? 'profit',
                     'follow_up_mode' => 'total_profit',
@@ -650,11 +672,15 @@ class AdminAIChatService
             return [
                 'intent' => 'profit',
                 'answer' => sprintf(
-                    'Paket paling profit adalah %s dengan profit RM %s, revenue RM %s, dan %d order.',
-                    (string) $bestPackage->nama_paket,
-                    number_format((float) $bestPackage->total_profit, 2),
-                    number_format((float) $bestPackage->total_revenue, 2),
-                    (int) $bestPackage->total_orders
+                    'Mengacu ke laporan, PROFIT FOR THE PERIOD %s adalah RM %s. Berdasarkan database penjualan paket, paket yang paling banyak terjual adalah %s dengan %d order, %d peserta, revenue RM %s, alokasi gateway fee RM %s, dan kontribusi profit RM %s sebelum beban operasional umum.',
+                    $periodLabel,
+                    number_format($profitForPeriod, 2),
+                    (string) $bestPackage['package_name'],
+                    (int) $bestPackage['total_orders'],
+                    (int) $bestPackage['total_participants'],
+                    number_format((float) $bestPackage['revenue'], 2),
+                    number_format((float) $bestPackage['allocated_gateway_fee'], 2),
+                    number_format((float) $bestPackage['contribution_profit'], 2)
                 ),
                 'context' => array_merge($context, [
                     'follow_up_from' => $previousContext['intent'] ?? 'profit',
@@ -666,12 +692,13 @@ class AdminAIChatService
         }
 
         $answer = sprintf(
-            'Dalam %s, paket paling profit adalah %s dengan estimasi profit RM %s dari %d order. Total profit keseluruhan periode ini sekitar RM %s.',
+            'Dalam %s, angka profit utama yang dipakai AI mengikuti PROFIT FOR THE PERIOD pada Statement of Profit or Loss, yaitu RM %s. Berdasarkan database penjualan paket, paket yang paling banyak terjual adalah %s dengan %d order, %d peserta, dan kontribusi profit RM %s sebelum beban operasional umum.',
             $periodLabel,
-            (string) $bestPackage->nama_paket,
-            number_format((float) $bestPackage->total_profit, 2),
-            (int) $bestPackage->total_orders,
-            number_format((float) $totalProfit, 2)
+            number_format($profitForPeriod, 2),
+            (string) $bestPackage['package_name'],
+            (int) $bestPackage['total_orders'],
+            (int) $bestPackage['total_participants'],
+            number_format((float) $bestPackage['contribution_profit'], 2)
         );
 
         return [
@@ -681,6 +708,82 @@ class AdminAIChatService
             'confidence' => 88.0,
             'model' => 'internal-ops-v1',
         ];
+    }
+
+    /**
+     * @return array<int, array<string, int|float|string>>
+     */
+    private function packageContributionProfitability(Carbon $since, Carbon $until): array
+    {
+        $rows = OrderItem::query()
+            ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
+            ->whereIn('orders.status', $this->recognizedStatuses())
+            ->whereBetween('orders.created_at', [$since, $until])
+            ->get([
+                'orders.id_order',
+                'orders.gateway_fee_amount',
+                'order_items.id_paket',
+                'order_items.nama_paket',
+                'order_items.jumlah_peserta',
+                'order_items.subtotal',
+                'order_items.vendor_cost_total',
+                'order_items.company_profit_total',
+            ]);
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $packages = [];
+
+        foreach ($rows->groupBy('id_order') as $orderItems) {
+            $orderRevenue = (float) $orderItems->sum(fn ($item) => (float) ($item->subtotal ?? 0));
+            $orderGatewayFee = (float) ($orderItems->first()->gateway_fee_amount ?? 0);
+
+            foreach ($orderItems as $item) {
+                $packageId = (string) ($item->id_paket ?? '');
+                $packageName = (string) ($item->nama_paket ?? 'Paket tanpa nama');
+                $itemRevenue = (float) ($item->subtotal ?? 0);
+                $itemBaseProfit = (float) ($item->company_profit_total ?? ($item->subtotal - ((float) ($item->vendor_cost_total ?? 0))));
+                $allocatedGatewayFee = $orderRevenue > 0 ? ($orderGatewayFee * ($itemRevenue / $orderRevenue)) : 0.0;
+                $contributionProfit = $itemBaseProfit - $allocatedGatewayFee;
+                $packageKey = $packageId !== '' ? $packageId : Str::slug($packageName);
+
+                if (!isset($packages[$packageKey])) {
+                    $packages[$packageKey] = [
+                        'package_id' => $packageId,
+                        'package_name' => $packageName,
+                        'revenue' => 0.0,
+                        'base_profit' => 0.0,
+                        'allocated_gateway_fee' => 0.0,
+                        'contribution_profit' => 0.0,
+                        'total_participants' => 0,
+                        'order_ids' => [],
+                    ];
+                }
+
+                $packages[$packageKey]['revenue'] += $itemRevenue;
+                $packages[$packageKey]['base_profit'] += $itemBaseProfit;
+                $packages[$packageKey]['allocated_gateway_fee'] += $allocatedGatewayFee;
+                $packages[$packageKey]['contribution_profit'] += $contributionProfit;
+                $packages[$packageKey]['total_participants'] += (int) ($item->jumlah_peserta ?? 0);
+                $packages[$packageKey]['order_ids'][(string) $item->id_order] = true;
+            }
+        }
+
+        return collect($packages)
+            ->map(function (array $package) {
+                $package['total_orders'] = count($package['order_ids']);
+                unset($package['order_ids']);
+
+                return $package;
+            })
+            ->sort(function (array $left, array $right) {
+                return [$right['total_orders'], $right['total_participants'], $right['revenue'], $right['contribution_profit']]
+                    <=> [$left['total_orders'], $left['total_participants'], $left['revenue'], $left['contribution_profit']];
+            })
+            ->values()
+            ->all();
     }
 
     /**
@@ -756,34 +859,51 @@ class AdminAIChatService
      */
     private function idleResourceInsight(string $message, array $history = [], array $sessionMemory = [], array $route = []): array
     {
-        $packageCount = PaketWisata::count();
-        $recommendations = app(PackageRecommendationService::class)->getRecommendations();
+        $days = $this->resolveDaysFromRoute($route, 30);
+        $since = Carbon::now()->subDays(max($days - 1, 0))->startOfDay();
+        $until = Carbon::now()->endOfDay();
         $normalized = $this->normalize($message);
         $previousContext = $this->lastAssistantContextForIntent($history, 'idle_resources');
 
-        $idleCounts = [
-            'boats_never_used' => (int) $recommendations['boats']['never_used']->count(),
-            'homestays_never_used' => (int) $recommendations['homestays']['never_used']->count(),
-            'destinations_never_used' => (int) $recommendations['destinations']['never_used']->count(),
-            'culinaries_never_used' => (int) $recommendations['culinaries']['never_used']->count(),
-            'kiosks_never_used' => (int) $recommendations['kiosks']['never_used']->count(),
-        ];
+        $resourceSnapshot = $this->idleResourceSnapshot($since, $until);
+        $groups = $resourceSnapshot['groups'] ?? [];
+        $topGroup = $resourceSnapshot['top_idle_group'] ?? null;
 
-        arsort($idleCounts);
-        $topIdleType = (string) array_key_first($idleCounts);
-        $topIdleCount = (int) current($idleCounts);
-        $humanLabel = str_replace('_never_used', '', $topIdleType);
-
-        $context = array_merge($idleCounts, [
-            'package_count' => $packageCount,
-            'top_idle_type' => $humanLabel,
-            'top_idle_count' => $topIdleCount,
-        ]);
-
-        if ($this->containsAny($normalized, ['berapa item', 'berapa jumlah', 'detail'])) {
+        if (!is_array($topGroup)) {
             return [
                 'intent' => 'idle_resources',
-                'answer' => 'Kelompok resource paling idle saat ini adalah ' . $humanLabel . ' dengan ' . $topIdleCount . ' item yang belum pernah dipakai di paket.',
+                'answer' => 'Belum ada data resource yang cukup untuk membaca idle resource secara akurat pada periode ini.',
+                'context' => $resourceSnapshot,
+                'confidence' => 45.0,
+                'model' => 'internal-ops-v1',
+            ];
+        }
+
+        $context = [
+            'period_start' => $since->toDateString(),
+            'period_end' => $until->toDateString(),
+            'top_idle_type' => $topGroup['label'],
+            'top_idle_count' => $topGroup['idle_count'],
+            'top_idle_percent' => $topGroup['idle_percent'],
+            'groups' => $groups,
+            'source' => 'live_query',
+        ];
+
+        if ($this->containsAny($normalized, ['berapa item', 'berapa jumlah', 'detail'])) {
+            $parts = collect($groups)->map(function (array $group) {
+                return sprintf(
+                    '%s: %d idle dari %d total resource (%.1f%%), terpakai %d resource',
+                    $group['label'],
+                    $group['idle_count'],
+                    $group['total_count'],
+                    $group['idle_percent'],
+                    $group['used_count']
+                );
+            })->implode('; ');
+
+            return [
+                'intent' => 'idle_resources',
+                'answer' => 'Detail idle resource untuk ' . $days . ' hari terakhir: ' . $parts . '.',
                 'context' => array_merge($context, [
                     'follow_up_from' => $previousContext['intent'] ?? 'idle_resources',
                     'follow_up_mode' => 'detail',
@@ -794,10 +914,13 @@ class AdminAIChatService
         }
 
         $answer = sprintf(
-            'Dari %d paket yang ada, resource paling idle saat ini ada di kelompok %s dengan %d item yang belum pernah dipakai di paket. Ini kandidat paling bagus untuk tindakan optimasi resource berikutnya.',
-            $packageCount,
-            $humanLabel,
-            $topIdleCount
+            'Berdasarkan database order %s hari terakhir, kelompok resource paling idle adalah %s dengan %d resource idle dari %d total resource atau %.1f%% idle. Resource yang aktif terpakai pada periode ini ada %d.',
+            $days,
+            $topGroup['label'],
+            $topGroup['idle_count'],
+            $topGroup['total_count'],
+            $topGroup['idle_percent'],
+            $topGroup['used_count']
         );
 
         return [
@@ -989,6 +1112,65 @@ class AdminAIChatService
             'total_participants' => (int) $topCustomer->total_participants,
             'last_order_at' => (string) $topCustomer->last_order_at,
             'favorite_package' => $favoritePackage?->nama_paket,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function idleResourceSnapshot(Carbon $since, Carbon $until): array
+    {
+        $groups = [
+            [
+                'key' => 'boats',
+                'label' => 'boats',
+                'total_count' => $this->activeResourceCount('boats'),
+                'used_count' => $this->usedBoatCountBetween($since, $until),
+            ],
+            [
+                'key' => 'homestays',
+                'label' => 'homestays',
+                'total_count' => $this->activeResourceCount('homestays'),
+                'used_count' => $this->usedHomestayCountBetween($since, $until),
+            ],
+            [
+                'key' => 'culinaries',
+                'label' => 'culinaries',
+                'total_count' => $this->activeResourceCount('culinaries'),
+                'used_count' => $this->usedCulinaryCountBetween($since, $until),
+            ],
+            [
+                'key' => 'kiosks',
+                'label' => 'kiosks',
+                'total_count' => $this->activeResourceCount('kiosks'),
+                'used_count' => $this->usedKioskCountBetween($since, $until),
+            ],
+        ];
+
+        $groups = collect($groups)
+            ->map(function (array $group) {
+                $idleCount = max((int) $group['total_count'] - (int) $group['used_count'], 0);
+                $idlePercent = (int) $group['total_count'] > 0
+                    ? round(($idleCount / (int) $group['total_count']) * 100, 1)
+                    : 0.0;
+
+                return array_merge($group, [
+                    'idle_count' => $idleCount,
+                    'idle_percent' => $idlePercent,
+                ]);
+            })
+            ->sort(function (array $left, array $right) {
+                return [$right['idle_percent'], $right['idle_count'], $left['used_count']]
+                    <=> [$left['idle_percent'], $left['idle_count'], $right['used_count']];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'period_start' => $since->toDateString(),
+            'period_end' => $until->toDateString(),
+            'groups' => $groups,
+            'top_idle_group' => $groups[0] ?? null,
         ];
     }
 
@@ -1215,6 +1397,51 @@ class AdminAIChatService
         }
 
         return (int) $query->count();
+    }
+
+    private function usedBoatCountBetween(Carbon $since, Carbon $until): int
+    {
+        return (int) DB::table('order_items')
+            ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
+            ->join('paket_wisata_boat', 'order_items.id_paket', '=', 'paket_wisata_boat.id_paket')
+            ->whereIn('orders.status', $this->recognizedStatuses())
+            ->whereBetween('orders.created_at', [$since, $until])
+            ->distinct()
+            ->count('paket_wisata_boat.id_boat');
+    }
+
+    private function usedHomestayCountBetween(Carbon $since, Carbon $until): int
+    {
+        return (int) DB::table('order_items')
+            ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
+            ->join('paket_wisata_homestay', 'order_items.id_paket', '=', 'paket_wisata_homestay.id_paket')
+            ->whereIn('orders.status', $this->recognizedStatuses())
+            ->whereBetween('orders.created_at', [$since, $until])
+            ->distinct()
+            ->count('paket_wisata_homestay.id_homestay');
+    }
+
+    private function usedCulinaryCountBetween(Carbon $since, Carbon $until): int
+    {
+        return (int) DB::table('order_items')
+            ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
+            ->join('paket_wisata_culinary', 'order_items.id_paket', '=', 'paket_wisata_culinary.id_paket')
+            ->join('paket_culinaries', 'paket_wisata_culinary.id_paket_culinary', '=', 'paket_culinaries.id')
+            ->whereIn('orders.status', $this->recognizedStatuses())
+            ->whereBetween('orders.created_at', [$since, $until])
+            ->distinct()
+            ->count('paket_culinaries.id_culinary');
+    }
+
+    private function usedKioskCountBetween(Carbon $since, Carbon $until): int
+    {
+        return (int) DB::table('order_items')
+            ->join('orders', 'order_items.id_order', '=', 'orders.id_order')
+            ->join('paket_wisata_kiosk', 'order_items.id_paket', '=', 'paket_wisata_kiosk.id_paket')
+            ->whereIn('orders.status', $this->recognizedStatuses())
+            ->whereBetween('orders.created_at', [$since, $until])
+            ->distinct()
+            ->count('paket_wisata_kiosk.id_kiosk');
     }
 
     private function bookedBoatCountForDate(string $date): int
