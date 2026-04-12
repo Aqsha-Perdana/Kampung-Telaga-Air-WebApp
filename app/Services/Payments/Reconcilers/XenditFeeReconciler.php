@@ -43,6 +43,43 @@ class XenditFeeReconciler
         return ['snapshot' => $snapshot, 'reason' => null];
     }
 
+    public function repairPendingActualFee(Order $order): ?PaymentFeeSnapshot
+    {
+        if ($order->payment_method !== 'xendit' || strtolower((string) ($order->gateway_fee_source ?? '')) !== 'actual') {
+            return null;
+        }
+
+        $responseData = $this->normalizeResponseData(
+            $order->paymentLogs()
+                ->where('payment_method', 'xendit')
+                ->where('status', 'success')
+                ->latest('id')
+                ->value('response_data')
+        );
+
+        $transaction = data_get($responseData, 'settled_transaction');
+        if (!is_array($transaction) || $this->isFinalFeeState($transaction)) {
+            return null;
+        }
+
+        $grossAmount = $this->toFloat($responseData['paid_amount'] ?? $responseData['amount'] ?? $order->base_amount) ?? (float) $order->base_amount;
+        [$feeAmount, $netAmount] = $this->estimateXenditFeeFromPayload($responseData, $grossAmount);
+
+        return new PaymentFeeSnapshot(
+            paymentMethod: 'xendit',
+            paymentChannel: $this->normalizeTransactionChannel(
+                (string) (data_get($transaction, 'channel_code') ?? $responseData['payment_channel'] ?? ''),
+                (string) ($order->payment_channel ?? '')
+            ),
+            grossAmount: $grossAmount,
+            feeAmount: $feeAmount,
+            netAmount: $netAmount,
+            feeCurrency: strtoupper((string) ($responseData['currency'] ?? 'MYR')),
+            feeSource: 'estimated',
+            paymentLogResponseData: $responseData
+        );
+    }
+
     private function findSettledTransactionForOrder(Order $order): ?array
     {
         $response = $this->xenditPaymentHelper->listTransactions([
@@ -65,15 +102,7 @@ class XenditFeeReconciler
         $grossAmount = $this->toFloat($transaction['amount'] ?? $order->base_amount) ?? (float) $order->base_amount;
         $netAmount = $this->toFloat($transaction['net_amount'] ?? null);
 
-        if (
-            $netAmount === null
-            && !in_array($feeStatus, ['COMPLETED', 'NOT_APPLICABLE'], true)
-            && !in_array($settlementStatus, ['SETTLED', 'EARLY_SETTLED'], true)
-        ) {
-            return null;
-        }
-
-        if (!in_array($settlementStatus, ['SETTLED', 'EARLY_SETTLED'], true) && $netAmount === null) {
+        if (!$this->isFinalFeeState($transaction)) {
             return null;
         }
 
@@ -108,6 +137,46 @@ class XenditFeeReconciler
             feeSource: 'actual',
             paymentLogResponseData: $existingResponseData
         );
+    }
+
+    private function isFinalFeeState(array $transaction): bool
+    {
+        $settlementStatus = strtoupper((string) ($transaction['settlement_status'] ?? ''));
+        $feeStatus = strtoupper((string) data_get($transaction, 'fee.status', ''));
+        $netAmount = $this->toFloat($transaction['net_amount'] ?? null);
+
+        return in_array($settlementStatus, ['SETTLED', 'EARLY_SETTLED'], true)
+            && (
+                $netAmount !== null
+                || in_array($feeStatus, ['COMPLETED', 'NOT_APPLICABLE'], true)
+            );
+    }
+
+    private function estimateXenditFeeFromPayload(array $payload, float $grossAmount): array
+    {
+        $channel = strtoupper((string) (
+            $payload['payment_channel']
+            ?? $payload['payment_method']
+            ?? $payload['ewallet_type']
+            ?? data_get($payload, 'settled_transaction.channel_code')
+            ?? ''
+        ));
+        $normalizedChannel = $this->normalizeTransactionChannel($channel);
+        $rules = config('payment.methods.xendit.reporting_fee_rules.channels.' . $normalizedChannel)
+            ?? config('payment.methods.xendit.reporting_fee_rules.channels.' . strtoupper((string) ($payload['ewallet_type'] ?? '')))
+            ?? config('payment.methods.xendit.reporting_fee_rules.default', []);
+
+        $percentage = (float) ($rules['percentage'] ?? 0);
+        $fixed = (float) ($rules['fixed'] ?? 0);
+        $minimum = (float) ($rules['minimum'] ?? 0);
+
+        $feeAmount = ($grossAmount * $percentage) + $fixed;
+        $feeAmount = max($feeAmount, $minimum);
+        $feeAmount = min($feeAmount, $grossAmount);
+        $feeAmount = round($feeAmount, 2);
+        $netAmount = round(max(0, $grossAmount - $feeAmount), 2);
+
+        return [$feeAmount, $netAmount];
     }
 
     private function normalizeTransactionChannel(string $channelCode, string $fallback = ''): string

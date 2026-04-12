@@ -73,7 +73,10 @@ class SalesQueryService
             return null;
         }
 
-        if (in_array($order->payment_method, ['xendit', 'stripe'], true) && strtolower((string) ($order->gateway_fee_source ?? '')) !== 'actual') {
+        if (
+            ($order->payment_method === 'stripe' && strtolower((string) ($order->gateway_fee_source ?? '')) !== 'actual')
+            || $order->payment_method === 'xendit'
+        ) {
             $eloquentOrder = Order::where('id_order', $orderId)->first();
 
             if ($eloquentOrder) {
@@ -403,7 +406,10 @@ class SalesQueryService
         return $recentTransactions->map(function ($order) {
             if (
                 !in_array(($order->payment_method ?? null), ['xendit', 'stripe'], true)
-                || strtolower((string) ($order->gateway_fee_source ?? '')) === 'actual'
+                || (
+                    ($order->payment_method ?? null) === 'stripe'
+                    && strtolower((string) ($order->gateway_fee_source ?? '')) === 'actual'
+                )
             ) {
                 return $order;
             }
