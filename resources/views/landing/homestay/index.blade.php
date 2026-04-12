@@ -151,7 +151,7 @@
                         <!-- Image -->
                         <div class="position-relative overflow-hidden" style="height: 250px;">
                             @if($homestay->foto)
-                                <img src="{{ asset('storage/' . $homestay->foto) }}" 
+                                <img src="{{ Storage::url($homestay->foto) }}" 
                                      class="card-img-top h-100 w-100" 
                                      style="object-fit: cover;" 
                                      alt="{{ $homestay->nama }}"

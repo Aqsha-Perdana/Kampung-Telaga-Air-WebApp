@@ -146,7 +146,7 @@
                             @endphp
 
                             @if($firstFoto && $firstFoto->foto)
-                                <img src="{{ asset('storage/' . $firstFoto->foto) }}" 
+                                <img src="{{ Storage::url($firstFoto->foto) }}" 
                                      class="card-img-top h-100 w-100" 
                                      style="object-fit: cover;" 
                                      alt="{{ $kiosk->nama }}"

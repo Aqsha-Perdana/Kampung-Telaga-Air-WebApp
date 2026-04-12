@@ -143,8 +143,8 @@
                 @endif
                     <div class="destination-card">
                         @if($destinasi->fotos->count() > 0)
-                            <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
-                            <small class="d-none">{{ asset('storage/'.$destinasi->fotos->first()->foto) }}</small>
+                            <img src="{{ Storage::url($destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
+                            <small class="d-none">{{ Storage::url($destinasi->fotos->first()->foto) }}</small>
                             <!-- DEBUG: {{ $destinasi->fotos->first()->foto }} -->
                         @else
                             <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
@@ -200,7 +200,7 @@
                 <a href="{{ route('landing.detail-destinasi', $destinasi->id_destinasi) }}" class="destination-link">
                     <div class="destination-card">
                         @if($destinasi->fotos->count() > 0)
-                            <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
+                            <img src="{{ Storage::url($destinasi->fotos->first()->foto) }}" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
                         @else
                             <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600" alt="{{ $destinasi->nama }}" loading="lazy" decoding="async">
                         @endif

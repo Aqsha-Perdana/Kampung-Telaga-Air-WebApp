@@ -65,9 +65,9 @@
                             $packagePhoto = $item->paket->foto_thumbnail ?? null;
                             $destinationPhoto = optional(optional($item->paket->destinasis->first())->fotos->first())->foto;
                             $imageUrl = $packagePhoto
-                                ? asset('storage/' . $packagePhoto)
+                                ? Storage::url($packagePhoto)
                                 : ($destinationPhoto
-                                    ? asset('storage/' . $destinationPhoto)
+                                    ? Storage::url($destinationPhoto)
                                     : 'https://via.placeholder.com/200x150?text=' . urlencode($item->paket->nama_paket));
                         @endphp
                         <div class="card border-0 shadow-sm hover-lift cart-item-card">

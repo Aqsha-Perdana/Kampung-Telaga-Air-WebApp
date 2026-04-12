@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AICenterController;
 use App\Http\Controllers\Admin\AdminNotificationController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use Illuminate\Support\Facades\Storage;
 
 Route::prefix('visitor')->group(function () {
     Route::get('/login-visitor', [WisatawanAuthController::class, 'showLoginForm'])->name('wisatawan.login');
@@ -83,6 +84,18 @@ Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
 
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
     ->name('google.callback');
+
+Route::get('/storage/{path}', function (string $path) {
+    abort_if(str_contains($path, '..'), 404);
+
+    $disk = Storage::disk('public');
+
+    abort_unless($disk->exists($path), 404);
+
+    return response()->file($disk->path($path), [
+        'Cache-Control' => 'public, max-age=31536000',
+    ]);
+})->where('path', '.*');
 
 Route::get('/', [LandingPageController::class, 'index'])->name('home');
 Route::get('/destination', [LandingPageController::class, 'destinasi'])->name('landing.destinasi');

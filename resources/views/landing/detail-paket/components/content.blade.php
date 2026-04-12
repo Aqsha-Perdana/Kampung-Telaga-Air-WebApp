@@ -2,9 +2,9 @@
     $heroDestination = $paket->destinasis->first();
     $heroDestinationPhoto = optional(optional($heroDestination)->fotos->first())->foto;
     $heroImage = $paket->foto_thumbnail
-        ? asset('storage/' . $paket->foto_thumbnail)
+        ? Storage::url($paket->foto_thumbnail)
         : ($heroDestinationPhoto
-            ? asset('storage/' . $heroDestinationPhoto)
+            ? Storage::url($heroDestinationPhoto)
             : 'https://via.placeholder.com/1200x600?text=' . urlencode($paket->nama_paket));
 
     $minimumParticipants = max((int) ($paket->minimum_participants ?? 1), 1);
@@ -134,7 +134,7 @@
                             @foreach($paket->destinasis as $destinasi)
                                 @php
                                     $destinationImage = optional($destinasi->fotos->first())->foto
-                                        ? asset('storage/' . optional($destinasi->fotos->first())->foto)
+                                        ? Storage::url(optional($destinasi->fotos->first())->foto)
                                         : 'https://via.placeholder.com/640x360?text=' . urlencode($destinasi->nama);
                                 @endphp
                                 <div class="col-md-6">

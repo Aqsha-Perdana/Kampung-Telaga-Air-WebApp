@@ -47,7 +47,7 @@
             <div class="row mb-3">
                 <div class="col-12">
                     <div class="main-gallery-image" style="height: 500px; overflow: hidden; border-radius: 15px;">
-                        <img src="{{ asset('storage/' . $kiosk->fotos->first()->foto) }}" 
+                        <img src="{{ Storage::url($kiosk->fotos->first()->foto) }}" 
                              class="w-100 h-100" 
                              style="object-fit: cover;"
                              alt="{{ $kiosk->nama }}"
@@ -64,8 +64,8 @@
                 <div class="col-6 col-md-3 col-lg-2">
                     <div class="thumbnail-item {{ $index == 0 ? 'active' : '' }}" 
                          style="height: 100px; overflow: hidden; border-radius: 10px; cursor: pointer; border: 3px solid transparent;"
-                         onclick="changeMainImage('{{ asset('storage/' . $foto->foto) }}', this)">
-                        <img src="{{ asset('storage/' . $foto->foto) }}" 
+                         onclick="changeMainImage('{{ Storage::url($foto->foto) }}', this)">
+                        <img src="{{ Storage::url($foto->foto) }}" 
                              class="w-100 h-100" 
                              style="object-fit: cover;"
                              alt="{{ $kiosk->nama }}"
@@ -250,7 +250,7 @@
                             @endphp
 
                             @if($relatedFoto && $relatedFoto->foto)
-                                <img src="{{ asset('storage/' . $relatedFoto->foto) }}" 
+                                <img src="{{ Storage::url($relatedFoto->foto) }}" 
                                      class="card-img-top h-100 w-100" 
                                      style="object-fit: cover;" 
                                      alt="{{ $related->nama }}"

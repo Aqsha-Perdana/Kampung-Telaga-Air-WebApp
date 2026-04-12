@@ -30,7 +30,7 @@
                 <div class="mb-4" data-aos="fade-up">
                     @if($destinasi->fotos->count() > 0)
                         <div class="mb-3">
-                            <img src="{{ asset('storage/'.$destinasi->fotos->first()->foto) }}" 
+                            <img src="{{ Storage::url($destinasi->fotos->first()->foto) }}" 
                                  alt="{{ $destinasi->nama }}"
                                  class="img-fluid rounded shadow-lg detail-hero-image"
                                  style="width: 100%; height: 500px; object-fit: cover;"
@@ -41,7 +41,7 @@
                         <div class="row g-2">
                             @foreach($destinasi->fotos->skip(1)->take(4) as $foto)
                             <div class="col-6 col-md-3">
-                                <img src="{{ asset('storage/'.$foto->foto) }}" 
+                                <img src="{{ Storage::url($foto->foto) }}" 
                                      alt="{{ $destinasi->nama }}"
                                      class="img-fluid rounded detail-thumb-image"
                                      style="width: 100%; height: 150px; object-fit: cover; cursor: pointer;"
@@ -53,7 +53,7 @@
                             @if($destinasi->fotos->count() > 5)
                             <div class="col-6 col-md-3">
                                 <div class="position-relative" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#galleryModal">
-                                    <img src="{{ asset('storage/'.$destinasi->fotos->get(5)->foto) }}" 
+                                    <img src="{{ Storage::url($destinasi->fotos->get(5)->foto) }}" 
                                          alt="{{ $destinasi->nama }}"
                                          class="img-fluid rounded detail-thumb-image"
                                          style="width: 100%; height: 150px; object-fit: cover;"
@@ -223,7 +223,7 @@
                             <div class="row g-0">
                                 <div class="col-12 col-sm-4">
                                     @if($rekomendasi->fotos->count() > 0)
-                                        <img src="{{ asset('storage/'.$rekomendasi->fotos->first()->foto) }}" 
+                                        <img src="{{ Storage::url($rekomendasi->fotos->first()->foto) }}" 
                                              class="img-fluid rounded-start h-100" 
                                              style="object-fit: cover;"
                                              alt="{{ $rekomendasi->nama }}"
@@ -269,7 +269,7 @@
                     <div class="carousel-inner">
                         @foreach($destinasi->fotos as $index => $foto)
                         <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                            <img src="{{ asset('storage/'.$foto->foto) }}" class="d-block w-100" alt="{{ $destinasi->nama }}" loading="lazy">
+                            <img src="{{ Storage::url($foto->foto) }}" class="d-block w-100" alt="{{ $destinasi->nama }}" loading="lazy">
                         </div>
                         @endforeach
                     </div>

@@ -55,7 +55,7 @@
             <div class="row">
                 <div class="col-12">
                     <div class="main-image" style="height: 500px; overflow: hidden; border-radius: 15px;">
-                        <img src="{{ asset('storage/' . $homestay->foto) }}" 
+                        <img src="{{ Storage::url($homestay->foto) }}" 
                              class="w-100 h-100" 
                              style="object-fit: cover;"
                              alt="{{ $homestay->nama }}"
@@ -352,7 +352,7 @@
                 <div class="card h-100 shadow-sm border-0 hover-lift">
                     <div class="position-relative overflow-hidden" style="height: 200px;">
                         @if($related->foto)
-                            <img src="{{ asset('storage/' . $related->foto) }}" 
+                            <img src="{{ Storage::url($related->foto) }}" 
                                  class="card-img-top h-100 w-100" 
                                  style="object-fit: cover;" 
                                  alt="{{ $related->nama }}"

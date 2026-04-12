@@ -22,7 +22,7 @@
                             $foto = $destinasi->fotos->first();
                         @endphp
                         <img
-                            src="{{ $foto?->foto ? asset('storage/' . $foto->foto) : asset('assets/images/backgrounds/bg-destination.JPG') }}"
+                            src="{{ $foto?->foto ? Storage::url($foto->foto) : asset('assets/images/backgrounds/bg-destination.JPG') }}"
                             class="card-img-top"
                             alt="{{ $destinasi->nama_destinasi }}"
                             style="height: 220px; object-fit: cover;"

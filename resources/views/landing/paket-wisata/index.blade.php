@@ -118,7 +118,7 @@
                         {{-- Foto Thumbnail (opsional) --}}
                         @if($paket->foto_thumbnail)
                         <div class="package-thumbnail">
-                            <img src="{{ asset('storage/' . $paket->foto_thumbnail) }}" 
+                            <img src="{{ Storage::url($paket->foto_thumbnail) }}" 
                                  alt="{{ $paket->nama_paket }}" 
                                  class="w-100" 
                                  style="height: 180px; object-fit: cover;"
