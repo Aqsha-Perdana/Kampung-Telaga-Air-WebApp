@@ -233,7 +233,7 @@
     </div>
 
     <div class="alert alert-light border small">
-        Profit &amp; Loss is recognized by order date for `paid`, `confirmed`, `completed`, and refunded impact. Cash Flow uses the direct method with gross customer receipts plus separate operating cash payments based on payment and refund dates.
+        <strong>Reading guide:</strong> Profit &amp; Loss shows the <strong>reporting profit impact</strong> recognized by order date. Cash Flow shows the <strong>gateway settlement and cash movement</strong> based on payment and refund dates. Gateway Fee (MDR) is the deduction taken by the payment gateway before settlement reaches the business.
     </div>
 
     <!-- Tabs Navigation -->
@@ -269,6 +269,9 @@
                     <small class="text-muted">For the period from {{ \Carbon\Carbon::parse($startDate)->format('d F Y') }} to {{ \Carbon\Carbon::parse($endDate)->format('d F Y') }}</small>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info border small">
+                        <strong>Reporting Profit View:</strong> this tab explains recognized revenue, vendor cost, Gateway Fee (MDR), and the final reported profit impact used in Sales Record and Financial Reports.
+                    </div>
                     <!-- Revenue Section -->
                     <table class="table table-sm">
                         <tbody>
@@ -480,7 +483,10 @@
                     </div>
 
                     <!-- Revenue Breakdown -->
-                    <h6 class="mt-4 mb-3 fw-bold">Detailed Transaction Impact</h6>
+                    <h6 class="mt-4 mb-2 fw-bold">Detailed Reporting Profit Impact</h6>
+                    <p class="text-muted small mb-3">
+                        Each row shows the accounting impact of one order: recognized revenue, vendor cost, Gateway Fee (MDR), and the final reported profit impact.
+                    </p>
                     <div class="table-responsive">
                         <table class="table table-hover table-sm">
                                 <thead class="table-light">
@@ -495,7 +501,7 @@
                                     <th class="text-end">Cost of Sales</th>
                                     <th class="text-end">Gateway Fee (MDR)</th>
                                     <th class="text-end">Other Income</th>
-                                    <th class="text-end">Net Impact</th>
+                                    <th class="text-end">Reported Profit Impact</th>
                                     <th class="text-center">Currency</th>
                                 </tr>
                             </thead>
@@ -552,7 +558,7 @@
                 </div>
                 <div class="card-body">
                     <div class="alert alert-light border small">
-                        This report groups gateway fee deductions by payment gateway and payment type, using the same recognized-order basis as the Profit &amp; Loss statement.
+                        <strong>Gateway Settlement Snapshot:</strong> this report groups gateway fee deductions by payment gateway and payment type, using the same recognized-order basis as the Profit &amp; Loss statement. Net settlement here means the amount left after Gateway Fee (MDR) is deducted from customer payment.
                     </div>
 
                     @if(($mdrReport['transaction_count'] ?? 0) > 0)
@@ -565,7 +571,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="border rounded p-3 h-100 bg-white">
-                                    <small class="text-muted d-block mb-1">Gross Amount Affected</small>
+                                    <small class="text-muted d-block mb-1">Gross Customer Payment</small>
                                     <div class="fw-bold fs-5">{{ format_ringgit_report($mdrReport['gross_amount']) }}</div>
                                 </div>
                             </div>
@@ -606,7 +612,7 @@
                                                     <div class="text-muted small">{{ $method['transaction_count'] }} transaction{{ $method['transaction_count'] > 1 ? 's' : '' }} with gateway fee</div>
                                                 </div>
                                                 <div class="d-flex flex-wrap gap-3 small">
-                                                    <span><span class="text-muted">Gross</span> <strong>{{ format_ringgit_report($method['gross_amount']) }}</strong></span>
+                                                    <span><span class="text-muted">Customer Payment</span> <strong>{{ format_ringgit_report($method['gross_amount']) }}</strong></span>
                                                     <span><span class="text-muted">Gateway Fee</span> <strong class="text-danger">{{ format_ringgit_report($method['fee_amount']) }}</strong></span>
                                                     <span><span class="text-muted">Avg</span> <strong>{{ number_format($method['average_fee_rate'], 2) }}%</strong></span>
                                                 </div>
@@ -628,7 +634,7 @@
                                                         <tr>
                                                             <th>Payment Type</th>
                                                             <th class="text-center">Transactions</th>
-                                                            <th class="text-end">Gross</th>
+                                                            <th class="text-end">Customer Payment</th>
                                                             <th class="text-end">Gateway Fee</th>
                                                             <th class="text-end">Avg Rate</th>
                                                             <th class="text-end">Net Settlement</th>
@@ -684,6 +690,9 @@
                     <small class="text-muted">For the period from {{ \Carbon\Carbon::parse($startDate)->format('d F Y') }} to {{ \Carbon\Carbon::parse($endDate)->format('d F Y') }}</small>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info border small">
+                        <strong>Cash and Settlement View:</strong> this tab shows actual cash movement. Gross customer payment is shown first, while Gateway Fee (MDR) and refunds are shown separately so the business can compare gross receipts against net settlement.
+                    </div>
                     <!-- Operating Activities -->
                     <table class="table table-sm">
                         <tbody>
@@ -691,7 +700,7 @@
                                 <td colspan="2"><strong>CASH FLOWS FROM OPERATING ACTIVITIES</strong></td>
                             </tr>
                             <tr class="table-light">
-                                <td class="ps-4"><strong>Cash Receipts from Customers (gross, net of sales discounts)</strong></td>
+                                <td class="ps-4"><strong>Cash Receipts from Customers (gross customer payment)</strong></td>
                                 <td class="text-end fw-bold">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['from_customers']) }}</td>
                             </tr>
                             @foreach($cashFlow['operating_activities']['cash_receipts']['by_payment_method'] as $method => $data)
@@ -701,7 +710,7 @@
                             </tr>
                             @endforeach
                             <tr>
-                                <td class="ps-5 text-muted">Net settlement reference after gateway charges</td>
+                                <td class="ps-5 text-muted">Gateway net settlement reference after Gateway Fee (MDR)</td>
                                 <td class="text-end text-muted">{{ format_ringgit_report($cashFlow['operating_activities']['cash_receipts']['net_settlement_reference']) }}</td>
                             </tr>
                             
@@ -720,7 +729,7 @@
                             </tr>
                             @endforeach
                             <tr>
-                                <td class="ps-5">Payment Gateway Fees</td>
+                                <td class="ps-5">Gateway Fee (MDR) Cash Outflow</td>
                                 <td class="text-end text-danger">({{ format_ringgit_report($cashFlow['operating_activities']['cash_payments']['payment_gateway_fees']) }})</td>
                             </tr>
                             <tr>

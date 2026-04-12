@@ -169,6 +169,17 @@ class SalesController extends Controller
             return redirect()->back()->with('success', 'This refund has already been processed.');
         }
 
+        if (($result['code'] ?? null) === 'processing') {
+            return redirect()->back()->with(
+                'success',
+                'Refund request approved and submitted to the gateway. RM '
+                . number_format((float) ($result['refund_amount'] ?? 0), 2)
+                . ' is now waiting for final refund confirmation (Refund fee: RM '
+                . number_format((float) ($result['refund_fee'] ?? 0), 2)
+                . ').'
+            );
+        }
+
         return redirect()->back()->with(
             'success',
             'Refund approved. RM '

@@ -134,13 +134,49 @@ class OrderFinancialProjectionService
     public function buildFinancialSummary(object $order, Collection $orderItems): array
     {
         $projection = $this->projectOrder($order, $orderItems);
+        $isRefunded = ($order->status ?? null) === 'refunded';
+        $grossCustomerPayment = (float) ($order->base_amount ?? 0);
+        $gatewayFee = (float) $projection['gateway_fee'];
+        $netSettlement = (float) $projection['gateway_net_amount'];
+        $recognizedRevenue = (float) $projection['net_revenue'];
+        $vendorCost = (float) $projection['cost_of_sales'];
+        $grossProfit = (float) $projection['gross_profit'];
+        $refundFeeRetained = (float) ($projection['other_income'] ?? 0);
+        $reportedProfitImpact = (float) $projection['net_profit_impact'];
+        $refundAmountReturned = (float) ($order->refund_amount ?? 0);
 
         return [
-            'vendor_total' => (float) $projection['cost_of_sales'],
-            'original_profit' => (float) $projection['gross_profit'],
-            'gateway_fee' => (float) $projection['gateway_fee'],
-            'gateway_net_amount' => (float) $projection['gateway_net_amount'],
-            'reported_profit_impact' => (float) $projection['net_profit_impact'],
+            'vendor_total' => $vendorCost,
+            'original_profit' => $grossProfit,
+            'gateway_fee' => $gatewayFee,
+            'gateway_net_amount' => $netSettlement,
+            'reported_profit_impact' => $reportedProfitImpact,
+            'settlement' => [
+                'gross_customer_payment' => $grossCustomerPayment,
+                'gateway_fee' => $gatewayFee,
+                'net_settlement_received' => $netSettlement,
+                'refund_amount_returned' => $refundAmountReturned,
+                'formula' => 'Net settlement = total paid by guest - gateway fee (MDR).',
+                'note' => $isRefunded
+                    ? 'This is the gateway settlement snapshot when payment was captured, before any refund was sent back to the guest.'
+                    : 'This is the amount the business receives from the payment gateway after MDR is deducted.',
+            ],
+            'reporting' => [
+                'recognized_revenue' => $recognizedRevenue,
+                'vendor_cost_snapshot' => $vendorCost,
+                'gross_profit_before_gateway_fee' => $grossProfit,
+                'refund_fee_retained' => $refundFeeRetained,
+                'reported_profit_impact' => $reportedProfitImpact,
+                'impact_label' => $isRefunded
+                    ? 'Reported Profit Impact in Financial Reports'
+                    : 'Profit After Gateway Fee (MDR)',
+                'formula' => $isRefunded
+                    ? 'For refunded orders, reported impact = retained refund fee - gateway fee (MDR).'
+                    : 'Profit after gateway fee = gross profit before gateway fee - gateway fee (MDR).',
+                'note' => $isRefunded
+                    ? 'Refunded orders no longer recognize sales revenue. Financial reports only keep the retained refund fee as the remaining impact.'
+                    : 'This section follows the same profit logic used in Sales Record and Financial Reports.',
+            ],
         ];
     }
 

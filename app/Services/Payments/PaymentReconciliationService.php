@@ -19,6 +19,15 @@ class PaymentReconciliationService
 
     public function refreshGatewayFeeIfAvailable(Order $order): array
     {
+        if ($order->payment_method === 'xendit') {
+            $repairSnapshot = $this->xenditFeeReconciler->repairPendingActualFee($order);
+            if ($repairSnapshot) {
+                $this->applySnapshot($order, $repairSnapshot);
+
+                return ['updated' => true] + $repairSnapshot->toRefreshResult();
+            }
+        }
+
         $result = match ($order->payment_method) {
             'stripe' => $this->stripeFeeReconciler->reconcile($order),
             'xendit' => $this->xenditFeeReconciler->reconcile($order),
@@ -34,6 +43,13 @@ class PaymentReconciliationService
             ];
         }
 
+        $this->applySnapshot($order, $snapshot);
+
+        return ['updated' => true] + $snapshot->toRefreshResult();
+    }
+
+    private function applySnapshot(Order $order, PaymentFeeSnapshot $snapshot): void
+    {
         DB::transaction(function () use ($order, $snapshot) {
             $order->update($snapshot->toOrderAttributes());
 
@@ -48,7 +64,5 @@ class PaymentReconciliationService
                 $paymentLog->update($snapshot->toPaymentLogAttributes());
             }
         });
-
-        return ['updated' => true] + $snapshot->toRefreshResult();
     }
 }

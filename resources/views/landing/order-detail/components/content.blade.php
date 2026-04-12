@@ -40,6 +40,7 @@
 
     $refundRequestMeta = match (true) {
         ($order->refund_status ?? null) === 'rejected' => 'Your refund request was reviewed and rejected.',
+        ($order->refund_status ?? null) === 'processing' => 'Your refund request was approved and is being processed by the payment gateway.',
         $order->status === 'refund_requested' => 'Your refund request is awaiting review.',
         $order->status === 'refunded' || ($order->refund_status ?? null) === 'succeeded' => 'Your refund request was approved and completed.',
         $hasRefundRequest => 'A refund request has been submitted for this order.',
@@ -573,7 +574,11 @@
                             @if($order->status === 'refund_requested')
                                 <div class="alert alert-warning mt-3 mb-0">
                                     <h6 class="alert-heading"><i class="bi bi-hourglass-split"></i> Refund Requested</h6>
-                                    <p class="mb-0">Your refund request is currently being reviewed by the admin.</p>
+                                    <p class="mb-0">
+                                        {{ ($order->refund_status ?? null) === 'processing'
+                                            ? 'Your refund request was approved and is currently being processed by the payment gateway.'
+                                            : 'Your refund request is currently being reviewed by the admin.' }}
+                                    </p>
                                     @if($order->refund_reason)
                                         <hr>
                                         <small><strong>Reason:</strong> {{ $order->refund_reason }}</small>
@@ -647,7 +652,6 @@
         </div>
     </div>
 </section>
-
 
 
 

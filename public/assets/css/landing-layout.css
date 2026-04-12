@@ -90,6 +90,49 @@
         gap: 0.5rem;
     }
 
+    .btn-auth-login {
+        width: auto !important;
+        height: auto !important;
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        min-height: 42px;
+        padding: 0.58rem 1rem;
+        border-radius: 999px;
+        text-decoration: none;
+        white-space: nowrap;
+        border: 1px solid rgba(37, 99, 235, 0.14);
+        background: #f8fbff;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+        color: #2563eb !important;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-auth-login::after {
+        content: none !important;
+        display: none !important;
+    }
+
+    .btn-auth-login:hover {
+        background: #eff6ff;
+        border-color: rgba(37, 99, 235, 0.2);
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.08);
+        color: #1d4ed8 !important;
+    }
+
+    .btn-auth-login__label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: inherit;
+    }
+
     .account-dropdown {
         position: relative;
     }
@@ -209,7 +252,7 @@
         top: 8px;
         bottom: 8px;
         left: 6px;
-        width: calc((100% - 12px) / 5);
+        width: calc((100% - 12px) / var(--nav-count, 5));
         border-radius: 12px;
         background: linear-gradient(180deg, #eff6ff 0%, #e9f1ff 100%);
         box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.12);
@@ -395,6 +438,12 @@
 
         .nav-actions .btn-outline-primary {
             margin-right: 0 !important;
+        }
+
+        .btn-auth-login {
+            width: 100%;
+            justify-content: center;
+            padding-inline: 1rem;
         }
 
         .navbar-custom .navbar-collapse .dropdown-menu-custom,
@@ -640,6 +689,11 @@
             min-width: 44px;
             min-height: 44px;
             border-radius: 12px;
+        }
+
+        .visitor-app .btn-auth-login {
+            min-height: 42px;
+            border-radius: 999px;
         }
 
         .visitor-app .btn-user-profile {

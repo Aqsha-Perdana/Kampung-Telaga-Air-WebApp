@@ -37,6 +37,16 @@ Or override the URL directly:
 php artisan xendit:webhook:invoice --url=https://payments.your-domain.com/webhook/xendit
 ```
 
+## Refund webhook
+
+When enabling Xendit refunds, point the refund webhook in Xendit Dashboard to the same application endpoint:
+
+```text
+https://payments.your-domain.com/webhook/xendit
+```
+
+The app now accepts both invoice payment callbacks and refund callbacks on the same URL, as long as the callback token matches `XENDIT_WEBHOOK_TOKEN`.
+
 ## Recommended setup
 
 For better stability, use a fixed HTTPS domain or tunnel with a reserved hostname instead of a temporary `ngrok` URL.

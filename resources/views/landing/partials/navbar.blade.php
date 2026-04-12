@@ -7,9 +7,9 @@
         <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <a href="{{ Auth::check() ? route('orders.history') : route('wisatawan.login') }}" class="mobile-notif-trigger d-md-none" aria-label="Notifications">
-            <i class="bi bi-bell"></i>
-            <span class="visually-hidden">Notifications</span>
+        <a href="{{ Auth::check() ? route('orders.history') : route('wisatawan.login') }}" class="mobile-notif-trigger d-md-none" aria-label="{{ Auth::check() ? 'Notifications' : 'Log in' }}">
+            <i class="bi {{ Auth::check() ? 'bi-bell' : 'bi-box-arrow-in-right' }}"></i>
+            <span class="visually-hidden">{{ Auth::check() ? 'Notifications' : 'Log in' }}</span>
         </a>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav mx-auto">
@@ -63,21 +63,21 @@
             </ul>
 
             <div class="d-flex align-items-center nav-actions">
-                <a href="{{ route('cart.index') }}" class="btn btn-outline-primary me-2 position-relative">
-                    <i class="bi bi-cart3"></i>
-
-                    @if($cartCount > 0)
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            {{ $cartCount }}
-                        </span>
-                    @endif
-                </a>
-
                 @guest
-                    <a href="{{ route('wisatawan.login') }}" class="btn-auth-login">
-                        <i class="bi bi-box-arrow-in-right"></i>
+                    <a href="{{ route('wisatawan.login') }}" class="btn-auth-login" aria-label="Log in to traveler account">
+                        <span class="btn-auth-login__label">Sign in</span>
                     </a>
                 @else
+                    <a href="{{ route('cart.index') }}" class="btn btn-outline-primary me-2 position-relative">
+                        <i class="bi bi-cart3"></i>
+
+                        @if($cartCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ $cartCount }}
+                            </span>
+                        @endif
+                    </a>
+
                     <div class="dropdown account-dropdown">
                         <button
                             id="accountMenuButton"

@@ -1,16 +1,17 @@
 @php
     $mobileNavIndex = 0;
+    $mobileNavCount = Auth::check() ? 5 : 4;
     if (request()->routeIs('landing.paket-wisata')) {
         $mobileNavIndex = 1;
-    } elseif (request()->routeIs('cart.*')) {
+    } elseif (Auth::check() && request()->routeIs('cart.*')) {
         $mobileNavIndex = 2;
     } elseif (request()->routeIs('orders.*')) {
-        $mobileNavIndex = 3;
+        $mobileNavIndex = Auth::check() ? 3 : 2;
     } elseif (request()->routeIs('wisatawan.*')) {
-        $mobileNavIndex = 4;
+        $mobileNavIndex = Auth::check() ? 4 : 3;
     }
 @endphp
-<nav class="mobile-bottom-nav d-md-none" aria-label="Mobile Navigation" style="--active-index: {{ $mobileNavIndex }};">
+<nav class="mobile-bottom-nav d-md-none" aria-label="Mobile Navigation" style="--active-index: {{ $mobileNavIndex }}; --nav-count: {{ $mobileNavCount }};">
     <span class="mobile-bottom-nav__glider" aria-hidden="true"></span>
     <a href="{{ route('home') }}" class="mobile-bottom-nav__item {{ request()->routeIs('home') ? 'is-active' : '' }}">
         <i class="bi bi-house-door"></i>
@@ -20,6 +21,7 @@
         <i class="bi bi-compass"></i>
         <span>Package</span>
     </a>
+    @auth
     <a href="{{ route('cart.index') }}" class="mobile-bottom-nav__item {{ request()->routeIs('cart.*') ? 'is-active' : '' }}">
         <span class="position-relative d-inline-flex align-items-center justify-content-center">
             <i class="bi bi-cart3"></i>
@@ -29,6 +31,7 @@
         </span>
         <span>Cart</span>
     </a>
+    @endauth
     <a href="{{ Auth::check() ? route('orders.history') : route('wisatawan.login') }}" class="mobile-bottom-nav__item {{ request()->routeIs('orders.*') ? 'is-active' : '' }}">
         <i class="bi bi-receipt-cutoff"></i>
         <span>Orders</span>
