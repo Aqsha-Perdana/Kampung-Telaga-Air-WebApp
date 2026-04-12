@@ -17,6 +17,7 @@
 
     $refundRequestMeta = match (true) {
         ($order->refund_status ?? null) === 'rejected' => 'Customer submitted a refund request and it was rejected.',
+        ($order->refund_status ?? null) === 'processing' => 'Refund request was approved and is waiting for final confirmation from the payment gateway.',
         $order->status === 'refund_requested' => 'Customer submitted a refund request and it is awaiting review.',
         $order->status === 'refunded' || ($order->refund_status ?? null) === 'succeeded' => 'Customer refund request was approved.',
         $hasRefundRequest => 'Customer submitted a refund request.',
@@ -582,10 +583,10 @@
 
                     @if($order->status === 'refund_requested')
                     <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveRefundModal">
+                        <button type="button" class="btn btn-success" onclick="openRefundDialog('approveRefundDialog')">
                             <i class="ti ti-check me-1"></i> Approve Refund
                         </button>
-                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectRefundModal">
+                        <button type="button" class="btn btn-outline-danger" onclick="openRefundDialog('rejectRefundDialog')">
                             <i class="ti ti-x me-1"></i> Reject Request
                         </button>
                     </div>
@@ -616,69 +617,74 @@
                             @if(!empty($order->stripe_refund_id))
                             <br>Stripe Refund ID: <span class="font-monospace">{{ $order->stripe_refund_id }}</span>
                             @endif
+                            @if(!empty($order->xendit_refund_id))
+                            <br>Xendit Refund ID: <span class="font-monospace">{{ $order->xendit_refund_id }}</span>
+                            @endif
                         </small>
                     </div>
                     @endif
                 </div>
             </div>
 
-            <!-- Approve Modal -->
-            <div class="modal fade" id="approveRefundModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
+            <!-- Approve Refund Dialog -->
+            <div class="refund-dialog-backdrop d-none" id="approveRefundDialog" aria-hidden="true">
+                <div class="refund-dialog-card">
                     <form action="{{ route('admin.sales.refund.approve', $order->id_order) }}" method="POST">
                         @csrf
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Approve Refund</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="refund-dialog-header">
+                            <div>
+                                <h5 class="mb-1">Approve Refund</h5>
+                                <small class="text-muted">Confirm the refund amount before sending it to the payment gateway.</small>
                             </div>
-                            <div class="modal-body">
-                                <p class="mb-3">This action will process a refund for this order.</p>
-                                <div class="alert alert-info mb-0">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span>Total Payment</span>
-                                        <strong>RM {{ number_format($order->base_amount, 2) }}</strong>
-                                    </div>
-                                    <div class="d-flex justify-content-between text-danger mb-1">
-                                        <span>Refund Fee (10%)</span>
-                                        <strong>- RM {{ number_format($order->base_amount * 0.10, 2) }}</strong>
-                                    </div>
-                                    <hr class="my-2">
-                                    <div class="d-flex justify-content-between fw-bold">
-                                        <span>Amount Returned</span>
-                                        <span class="text-success">RM {{ number_format($order->base_amount * 0.90, 2) }}</span>
-                                    </div>
+                            <button type="button" class="btn-close" aria-label="Close" onclick="closeRefundDialog('approveRefundDialog')"></button>
+                        </div>
+                        <div class="refund-dialog-body">
+                            <p class="mb-3">This action will process a refund for this order.</p>
+                            <div class="alert alert-info mb-0">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Total Payment</span>
+                                    <strong>RM {{ number_format($order->base_amount, 2) }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between text-danger mb-1">
+                                    <span>Refund Fee (10%)</span>
+                                    <strong>- RM {{ number_format($order->base_amount * 0.10, 2) }}</strong>
+                                </div>
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between fw-bold">
+                                    <span>Amount Returned</span>
+                                    <span class="text-success">RM {{ number_format($order->base_amount * 0.90, 2) }}</span>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-success">Confirm Approval</button>
-                            </div>
+                        </div>
+                        <div class="refund-dialog-footer">
+                            <button type="button" class="btn btn-light border" onclick="closeRefundDialog('approveRefundDialog')">Cancel</button>
+                            <button type="submit" class="btn btn-success">Confirm Approval</button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Reject Modal -->
-            <div class="modal fade" id="rejectRefundModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
+            <!-- Reject Refund Dialog -->
+            <div class="refund-dialog-backdrop d-none" id="rejectRefundDialog" aria-hidden="true">
+                <div class="refund-dialog-card">
                     <form action="{{ route('admin.sales.refund.reject', $order->id_order) }}" method="POST">
                         @csrf
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Reject Refund Request</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="refund-dialog-header">
+                            <div>
+                                <h5 class="mb-1">Reject Refund Request</h5>
+                                <small class="text-muted">Provide a clear reason so the rejection is recorded properly.</small>
                             </div>
-                            <div class="modal-body">
-                                <div class="mb-0">
-                                    <label class="form-label">Rejection Reason</label>
-                                    <textarea name="reason" class="form-control" rows="3" required placeholder="Explain why this request is rejected..."></textarea>
-                                </div>
+                            <button type="button" class="btn-close" aria-label="Close" onclick="closeRefundDialog('rejectRefundDialog')"></button>
+                        </div>
+                        <div class="refund-dialog-body">
+                            <div class="mb-0">
+                                <label class="form-label">Rejection Reason</label>
+                                <textarea name="reason" class="form-control" rows="4" required placeholder="Explain why this request is rejected..."></textarea>
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-                                <button type="submit" class="btn btn-danger">Reject Request</button>
-                            </div>
+                        </div>
+                        <div class="refund-dialog-footer">
+                            <button type="button" class="btn btn-light border" onclick="closeRefundDialog('rejectRefundDialog')">Cancel</button>
+                            <button type="submit" class="btn btn-danger">Reject Request</button>
                         </div>
                     </form>
                 </div>
@@ -795,55 +801,82 @@
                     <h5 class="mb-0 text-white"><i class="ti ti-currency-dollar"></i> Payment Summary</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Total Paid by Guest:</span>
-                        <span class="fw-bold">RM {{ number_format($order->base_amount, 2) }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Vendor Cost Snapshot:</span>
-                        <span class="text-danger">- RM {{ number_format($financialSummary['vendor_total'], 2) }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Gateway Fee (MDR):</span>
-                        <span class="text-danger">
-                            - RM {{ number_format($financialSummary['gateway_fee'], 2) }}
-                            <span class="badge {{ gateway_fee_source_badge_class($order->gateway_fee_source ?? null) }} border-0 ms-1">
+                    <div class="border rounded-3 p-3 bg-light mb-3">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h6 class="mb-1">Gateway Settlement Snapshot</h6>
+                                <small class="text-muted">
+                                    Cash movement recorded from the payment gateway at the time payment was captured.
+                                </small>
+                            </div>
+                            <span class="badge {{ gateway_fee_source_badge_class($order->gateway_fee_source ?? null) }} border-0">
                                 {{ gateway_fee_source_label($order->gateway_fee_source ?? null) }}
                             </span>
-                        </span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Net Settlement Received:</span>
-                        <span class="fw-bold">RM {{ number_format($financialSummary['gateway_net_amount'], 2) }}</span>
-                    </div>
-                    
-                    <hr class="my-3">
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="h6 mb-0">Gross Profit Before Gateway Fee (MDR):</span>
-                        <h4 class="text-primary fw-bold mb-0">
-                            RM {{ number_format($financialSummary['original_profit'], 2) }}
-                        </h4>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Total Paid by Guest</span>
+                            <span class="fw-bold">{{ format_ringgit($financialSummary['settlement']['gross_customer_payment']) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Gateway Fee (MDR)</span>
+                            <span class="text-danger">- {{ format_ringgit($financialSummary['settlement']['gateway_fee']) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between {{ $order->status === 'refunded' ? 'mb-2' : '' }}">
+                            <span class="text-muted">{{ $order->status === 'refunded' ? 'Initial Net Settlement from Gateway' : 'Net Settlement Received' }}</span>
+                            <span class="fw-bold">{{ format_ringgit($financialSummary['settlement']['net_settlement_received']) }}</span>
+                        </div>
+
+                        @if($order->status === 'refunded' && $financialSummary['settlement']['refund_amount_returned'] > 0)
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Refund Returned to Guest</span>
+                            <span class="text-danger">- {{ format_ringgit($financialSummary['settlement']['refund_amount_returned']) }}</span>
+                        </div>
+                        @endif
+
+                        <small class="text-muted d-block mt-2">{{ $financialSummary['settlement']['formula'] }}</small>
+                        <small class="text-muted d-block">{{ $financialSummary['settlement']['note'] }}</small>
                     </div>
 
-                    @if($order->status === 'refunded')
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                        <span class="h6 mb-0">Current Reported Profit Impact:</span>
-                        <h4 class="text-success fw-bold mb-0">
-                            RM {{ number_format($financialSummary['reported_profit_impact'], 2) }}
-                        </h4>
+                    <div class="border rounded-3 p-3">
+                        <div class="mb-3">
+                            <h6 class="mb-1">Reporting Profit View</h6>
+                            <small class="text-muted">
+                                Accounting impact used in Sales Record and Financial Reports.
+                            </small>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Recognized Revenue</span>
+                            <span class="fw-bold">{{ format_ringgit($financialSummary['reporting']['recognized_revenue']) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Vendor Cost Snapshot</span>
+                            <span class="text-danger">- {{ format_ringgit($financialSummary['reporting']['vendor_cost_snapshot']) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Gross Profit Before Gateway Fee (MDR)</span>
+                            <span class="fw-bold text-primary">{{ format_ringgit($financialSummary['reporting']['gross_profit_before_gateway_fee']) }}</span>
+                        </div>
+
+                        @if($order->status === 'refunded')
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Refund Fee Retained</span>
+                            <span class="fw-bold text-success">{{ format_ringgit($financialSummary['reporting']['refund_fee_retained']) }}</span>
+                        </div>
+                        @endif
+
+                        <div class="d-flex justify-content-between align-items-start mt-3 pt-3 border-top gap-3">
+                            <div>
+                                <span class="h6 mb-0 d-block">{{ $financialSummary['reporting']['impact_label'] }}</span>
+                                <small class="text-muted">{{ $financialSummary['reporting']['formula'] }}</small>
+                            </div>
+                            <h4 class="text-success fw-bold mb-0 text-end">
+                                {{ format_ringgit($financialSummary['reporting']['reported_profit_impact']) }}
+                            </h4>
+                        </div>
+                        <small class="text-muted d-block mt-2">{{ $financialSummary['reporting']['note'] }}</small>
                     </div>
-                    <small class="text-muted d-block mt-1">
-                        Refunded orders are recognized in financial reports through the retained refund fee.
-                    </small>
-                    @else
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                        <span class="h6 mb-0">Profit After Gateway Fee (MDR):</span>
-                        <h4 class="text-success fw-bold mb-0">
-                            RM {{ number_format($financialSummary['reported_profit_impact'], 2) }}
-                        </h4>
-                    </div>
-                    @endif
                 </div>
             </div>
 
@@ -885,3 +918,118 @@
         </div>
     </div>
 </div>
+
+<style>
+    .refund-dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 1080;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(2px);
+    }
+
+    .refund-dialog-card {
+        width: min(100%, 540px);
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+        overflow: hidden;
+    }
+
+    .refund-dialog-header,
+    .refund-dialog-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .refund-dialog-header {
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .refund-dialog-body {
+        padding: 1.5rem;
+    }
+
+    .refund-dialog-footer {
+        border-top: 1px solid #e9ecef;
+        justify-content: flex-end;
+    }
+
+    @media (max-width: 576px) {
+        .refund-dialog-backdrop {
+            padding: 1rem;
+            align-items: flex-end;
+        }
+
+        .refund-dialog-card {
+            width: 100%;
+            border-radius: 20px 20px 14px 14px;
+        }
+
+        .refund-dialog-footer {
+            flex-direction: column-reverse;
+        }
+
+        .refund-dialog-footer .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    function openRefundDialog(dialogId) {
+        const dialog = document.getElementById(dialogId);
+        if (!dialog) {
+            return;
+        }
+
+        document.querySelectorAll('.refund-dialog-backdrop').forEach((item) => {
+            item.classList.add('d-none');
+            item.setAttribute('aria-hidden', 'true');
+        });
+
+        dialog.classList.remove('d-none');
+        dialog.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeRefundDialog(dialogId) {
+        const dialog = document.getElementById(dialogId);
+        if (!dialog) {
+            return;
+        }
+
+        dialog.classList.add('d-none');
+        dialog.setAttribute('aria-hidden', 'true');
+
+        if (![...document.querySelectorAll('.refund-dialog-backdrop')].some((item) => !item.classList.contains('d-none'))) {
+            document.body.classList.remove('overflow-hidden');
+        }
+    }
+
+    document.querySelectorAll('.refund-dialog-backdrop').forEach((dialog) => {
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) {
+                closeRefundDialog(dialog.id);
+            }
+        });
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        const activeDialog = [...document.querySelectorAll('.refund-dialog-backdrop')].find((item) => !item.classList.contains('d-none'));
+        if (activeDialog) {
+            closeRefundDialog(activeDialog.id);
+        }
+    });
+</script>
