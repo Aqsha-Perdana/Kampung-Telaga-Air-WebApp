@@ -38,7 +38,15 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            'root' => env('PUBLIC_STORAGE_ROOT', storage_path('app/public')),
+            'url' => env('APP_STORAGE_URL', '/storage'),
+            'visibility' => 'public',
+            'throw' => false,
+        ],
+
+        'cpanel_public' => [
+            'driver' => 'local',
+            'root' => base_path('../../telaga.poyekterapan1.com/storage'),
             'url' => env('APP_STORAGE_URL', '/storage'),
             'visibility' => 'public',
             'throw' => false,

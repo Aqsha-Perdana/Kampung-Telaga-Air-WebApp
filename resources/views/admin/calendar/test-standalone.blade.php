@@ -171,7 +171,7 @@
         
         if (typeof FullCalendar === 'undefined') {
             console.error('FullCalendar not loaded!');
-            calendarEl.innerHTML = '<div class="alert alert-danger">FullCalendar library gagal dimuat</div>';
+            calendarEl.innerHTML = '<div class="alert alert-danger">Failed to load FullCalendar library</div>';
             return;
         }
         

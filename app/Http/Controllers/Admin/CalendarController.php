@@ -165,11 +165,11 @@ class CalendarController extends Controller
     private function getStatusLabel($status)
     {
         $labels = [
-            'pending' => 'Menunggu Pembayaran',
-            'paid' => 'Dibayar',
-            'confirmed' => 'Dikonfirmasi',
-            'cancelled' => 'Dibatalkan',
-            'completed' => 'Selesai',
+            'pending' => 'Awaiting Payment',
+            'paid' => 'Paid',
+            'confirmed' => 'Confirmed',
+            'cancelled' => 'Cancelled',
+            'completed' => 'Completed',
         ];
 
         return $labels[$status] ?? $status;

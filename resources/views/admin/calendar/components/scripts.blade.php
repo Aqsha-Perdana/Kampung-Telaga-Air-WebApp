@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const boatProgress = document.getElementById('boatProgress');
                 boatProgress.style.width = data.boats.utilization_percent + '%';
                 updateUtilizationStyle('boat', data.boats.utilization_percent);
-                updateResourceMeta('boatsMeta', data.boats.available_list, 'Tidak ada boat tersedia');
+                updateResourceMeta('boatsMeta', data.boats.available_list, 'No boats available');
 
                 // Update Homestays
                 document.getElementById('homestaysAvailable').textContent = data.homestays.available;
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const homestayProgress = document.getElementById('homestayProgress');
                 homestayProgress.style.width = data.homestays.utilization_percent + '%';
                 updateUtilizationStyle('homestay', data.homestays.utilization_percent);
-                updateResourceMeta('homestaysMeta', data.homestays.available_list, 'Tidak ada homestay tersedia');
+                updateResourceMeta('homestaysMeta', data.homestays.available_list, 'No homestays available');
 
                 // Update Culinaries
                 document.getElementById('culinariesAvailable').textContent = data.culinaries.available;
@@ -479,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const culinaryProgress = document.getElementById('culinaryProgress');
                 culinaryProgress.style.width = data.culinaries.utilization_percent + '%';
                 updateUtilizationStyle('culinary', data.culinaries.utilization_percent);
-                updateResourceMeta('culinariesMeta', data.culinaries.available_list, 'Tidak ada culinary tersedia');
+                updateResourceMeta('culinariesMeta', data.culinaries.available_list, 'No culinaries available');
 
                 // Update Kiosks
                 document.getElementById('kiosksAvailable').textContent = data.kiosks.available;
@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const kioskProgress = document.getElementById('kioskProgress');
                 kioskProgress.style.width = data.kiosks.utilization_percent + '%';
                 updateUtilizationStyle('kiosk', data.kiosks.utilization_percent);
-                updateResourceMeta('kiosksMeta', data.kiosks.available_list, 'Tidak ada kiosk tersedia');
+                updateResourceMeta('kiosksMeta', data.kiosks.available_list, 'No kiosks available');
             })
             .catch(error => {
                 setResourceFallbackState();
@@ -540,15 +540,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const preview = names.slice(0, 2).join(', ');
         const remaining = names.length - 2;
-        element.textContent = remaining > 0 ? `${preview} +${remaining} lainnya` : preview;
+        element.textContent = remaining > 0 ? `${preview} +${remaining} more` : preview;
     }
 
     function setResourceFallbackState() {
         const mappings = [
-            { key: 'boats', singular: 'boat', emptyText: 'Gagal memuat data boat' },
-            { key: 'homestays', singular: 'homestay', emptyText: 'Gagal memuat data homestay' },
-            { key: 'culinaries', singular: 'culinary', emptyText: 'Gagal memuat data culinary' },
-            { key: 'kiosks', singular: 'kiosk', emptyText: 'Gagal memuat data kiosk' },
+            { key: 'boats', singular: 'boat', emptyText: 'Failed to load boat data' },
+            { key: 'homestays', singular: 'homestay', emptyText: 'Failed to load homestay data' },
+            { key: 'culinaries', singular: 'culinary', emptyText: 'Failed to load culinary data' },
+            { key: 'kiosks', singular: 'kiosk', emptyText: 'Failed to load kiosk data' },
         ];
 
         mappings.forEach(({ key, singular, emptyText }) => {

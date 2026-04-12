@@ -104,7 +104,7 @@
                                 <input type="text" 
                                        name="search" 
                                        class="form-control" 
-                                       placeholder="Cari restaurant..." 
+                                       placeholder="Search restaurant..." 
                                        value="{{ request('search') }}">
                             </div>
                             <div class="col-md-3">

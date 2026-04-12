@@ -136,7 +136,7 @@
                                                      decoding="async"
                                                      style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
                                                      data-bs-toggle="tooltip"
-                                                     title="Klik untuk memperbesar">
+                                                     title="Click to enlarge">
                                                 </div>
                                             @endforeach
                                             @if($destinasi->fotos->count() > 3)
@@ -174,7 +174,7 @@
                                         <a href="{{ route('destinasis.show', $destinasi) }}" 
                                            class="btn btn-sm btn-info text-white" 
                                            data-bs-toggle="tooltip"
-                                           title="Lihat Detail">
+                                           title="View Detail">
                                             <i class="ti ti-eye"></i>
                                         </a>
                                         <a href="{{ route('destinasis.edit', $destinasi) }}" 
@@ -192,7 +192,7 @@
                                             <button type="submit" 
                                                     class="btn btn-sm btn-danger" 
                                                     data-bs-toggle="tooltip"
-                                                    title="Hapus Data">
+                                                    title="Delete Data">
                                                 <i class="ti ti-trash"></i>
                                             </button>
                                         </form>
@@ -204,10 +204,10 @@
                                 <td colspan="7" class="text-center py-5">
                                     <div class="py-4">
                                         <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-                                        <h5 class="text-muted">Belum Ada Data Destinasi</h5>
-                                        <p class="text-muted mb-3">Mulai tambahkan destinasi wisata pertama Anda</p>
+                                        <h5 class="text-muted">No Destination Data Yet</h5>
+                                        <p class="text-muted mb-3">Start by adding your first destination</p>
                                         <a href="{{ route('destinasis.create') }}" class="btn btn-primary">
-                                            <i class="bi bi-plus-circle me-2"></i>Tambah Destinasi
+                                            <i class="bi bi-plus-circle me-2"></i>Add Destination
                                         </a>
                                     </div>
                                 </td>
@@ -221,8 +221,8 @@
                 @if($destinasis->hasPages())
                 <div class="mt-4 d-flex justify-content-between align-items-center">
                     <div class="text-muted">
-                        Menampilkan {{ $destinasis->firstItem() ?? 0 }} - {{ $destinasis->lastItem() ?? 0 }} 
-                        dari {{ $destinasis->total() }} destinasi
+                        Showing {{ $destinasis->firstItem() ?? 0 }} - {{ $destinasis->lastItem() ?? 0 }} 
+                        of {{ $destinasis->total() }} destinations
                     </div>
                     <div>
                         {{ $destinasis->links() }}
@@ -274,7 +274,7 @@
                         @if(($destinasi->fotos_count ?? $destinasi->fotos->count()) > 0)
                         <div class="position-absolute top-0 end-0 m-3">
                             <span class="badge bg-dark bg-opacity-75 shadow-sm">
-                                <i class="bi bi-camera-fill me-1"></i>{{ $destinasi->fotos_count ?? $destinasi->fotos->count() }} Foto
+                                <i class="bi bi-camera-fill me-1"></i>{{ $destinasi->fotos_count ?? $destinasi->fotos->count() }} Photos
                             </span>
                         </div>
                         @endif
@@ -304,7 +304,7 @@
                         <div class="d-grid gap-2 mt-3">
                             <a href="{{ route('destinasis.show', $destinasi) }}" 
                                class="btn btn-outline-primary btn-sm">
-                                <i class="ti ti-eye me-1"></i>Lihat Detail
+                                <i class="ti ti-eye me-1"></i>View Detail
                             </a>
                             <div class="btn-group" role="group">
                                 <a href="{{ route('destinasis.edit', $destinasi) }}" 
@@ -318,7 +318,7 @@
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">
-                                        <i class="ti ti-trash me-1"></i>Hapus
+                                        <i class="ti ti-trash me-1"></i>Delete
                                     </button>
                                 </form>
                             </div>
@@ -331,10 +331,10 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-body text-center py-5">
                         <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-                        <h5 class="text-muted">Belum Ada Data Destinasi</h5>
-                        <p class="text-muted mb-3">Mulai tambahkan destinasi wisata pertama Anda</p>
+                        <h5 class="text-muted">No Destination Data Yet</h5>
+                        <p class="text-muted mb-3">Start by adding your first destination</p>
                         <a href="{{ route('destinasis.create') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-2"></i>Tambah Destinasi
+                            <i class="bi bi-plus-circle me-2"></i>Add Destination
                         </a>
                     </div>
                 </div>
@@ -348,8 +348,8 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-muted">
-                        Menampilkan {{ $destinasis->firstItem() ?? 0 }} - {{ $destinasis->lastItem() ?? 0 }} 
-                        dari {{ $destinasis->total() }} destinasi
+                        Showing {{ $destinasis->firstItem() ?? 0 }} - {{ $destinasis->lastItem() ?? 0 }} 
+                        of {{ $destinasis->total() }} destinations
                     </div>
                     <div>
                         {{ $destinasis->links() }}

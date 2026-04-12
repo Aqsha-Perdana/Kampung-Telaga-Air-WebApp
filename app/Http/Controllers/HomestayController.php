@@ -30,7 +30,7 @@ class HomestayController extends Controller
         $this->homestayService->create($request->validated(), $request->file('foto'));
 
         return redirect()->route('homestays.index')
-            ->with('success', 'Homestay berhasil ditambahkan!');
+            ->with('success', 'Homestay added successfully!');
     }
 
     public function show(Homestay $homestay)
@@ -48,7 +48,7 @@ class HomestayController extends Controller
         $this->homestayService->update($homestay, $request->validated(), $request->file('foto'));
 
         return redirect()->route('homestays.index')
-            ->with('success', 'Homestay berhasil diperbarui!');
+            ->with('success', 'Homestay updated successfully!');
     }
 
     public function destroy(Homestay $homestay)
@@ -56,6 +56,6 @@ class HomestayController extends Controller
         $this->homestayService->delete($homestay);
 
         return redirect()->route('homestays.index')
-            ->with('success', 'Homestay berhasil dihapus!');
+            ->with('success', 'Homestay deleted successfully!');
     }
 }

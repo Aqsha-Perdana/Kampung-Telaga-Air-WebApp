@@ -34,10 +34,10 @@ class CulinaryController extends Controller
             );
 
             return redirect()->route('culinaries.index')
-                ->with('success', 'Kuliner berhasil ditambahkan!');
+                ->with('success', 'Culinary added successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal menambahkan kuliner: ' . $e->getMessage())
+                ->with('error', 'Failed to add culinary: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -66,10 +66,10 @@ class CulinaryController extends Controller
             );
 
             return redirect()->route('culinaries.index')
-                ->with('success', 'Kuliner berhasil diupdate!');
+                ->with('success', 'Culinary updated successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal mengupdate kuliner: ' . $e->getMessage())
+                ->with('error', 'Failed to update culinary: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -80,10 +80,10 @@ class CulinaryController extends Controller
             $this->culinaryService->delete($culinary);
 
             return redirect()->route('culinaries.index')
-                ->with('success', 'Kuliner berhasil dihapus!');
+                ->with('success', 'Culinary deleted successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal menghapus kuliner: ' . $e->getMessage());
+                ->with('error', 'Failed to delete culinary: ' . $e->getMessage());
         }
     }
 }

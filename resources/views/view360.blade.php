@@ -242,13 +242,13 @@
     <!-- Loading indicator -->
     <div class="loading" id="loading">
         <div class="spinner"></div>
-        <p>Memuat panorama 360°...</p>
+        <p>Loading 360° panorama...</p>
     </div>
     
     <!-- Back button -->
     <a href="{{ url()->previous() }}" class="back-btn">
         <i class="fas fa-arrow-left"></i>
-        Kembali
+        Back
     </a>
     
     <!-- Panorama container -->
@@ -285,7 +285,7 @@
     <!-- Related footages -->
     @if($relatedFootages->count() > 0)
     <div class="related-overlay">
-        <h3><i class="fas fa-images"></i> Lokasi Lainnya</h3>
+        <h3><i class="fas fa-images"></i> Other Locations</h3>
         @foreach($relatedFootages as $related)
             <a href="{{ route('view360.show', $related->id_footage360) }}" class="related-item">
                 <img src="{{ $related->file_foto }}" alt="{{ $related->judul }}">

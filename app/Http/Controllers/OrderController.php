@@ -75,7 +75,7 @@ class OrderController extends Controller
         ]);
 
         return redirect()->route('orders.show', $order->id_order)
-            ->with('success', 'Pembayaran berhasil diproses. Menunggu konfirmasi admin.');
+            ->with('success', 'Payment processed successfully. Awaiting admin confirmation.');
     }
 
     /**

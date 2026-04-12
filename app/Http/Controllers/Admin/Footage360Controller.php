@@ -72,11 +72,11 @@ class Footage360Controller extends Controller
             Footage360::create($data);
 
             return redirect()->route('footage360.index')
-                            ->with('success', 'Footage 360° berhasil diupload ke Cloudinary!');
+                            ->with('success', '360° footage uploaded to Cloudinary successfully!');
                             
         } catch (\Exception $e) {
             return redirect()->back()
-                            ->with('error', 'Gagal upload: ' . $e->getMessage())
+                            ->with('error', 'Upload failed: ' . $e->getMessage())
                             ->withInput();
         }
     }
@@ -149,11 +149,11 @@ class Footage360Controller extends Controller
             $footage360->update($data);
 
             return redirect()->route('footage360.index')
-                            ->with('success', 'Footage 360° berhasil diupdate!');
+                            ->with('success', '360° footage updated successfully!');
                             
         } catch (\Exception $e) {
             return redirect()->back()
-                            ->with('error', 'Gagal update: ' . $e->getMessage())
+                            ->with('error', 'Update failed: ' . $e->getMessage())
                             ->withInput();
         }
     }
@@ -172,11 +172,11 @@ class Footage360Controller extends Controller
             $footage360->delete();
 
             return redirect()->route('footage360.index')
-                            ->with('success', 'Footage 360° berhasil dihapus dari Cloudinary!');
+                            ->with('success', '360° footage deleted from Cloudinary successfully!');
                             
         } catch (\Exception $e) {
             return redirect()->back()
-                            ->with('error', 'Gagal hapus: ' . $e->getMessage());
+                            ->with('error', 'Delete failed: ' . $e->getMessage());
         }
     }
 }

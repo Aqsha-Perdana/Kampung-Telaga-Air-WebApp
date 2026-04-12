@@ -34,10 +34,10 @@ class DestinasiController extends Controller
             );
 
             return redirect()->route('destinasis.index')
-                ->with('success', 'Destinasi berhasil ditambahkan!');
+                ->with('success', 'Destination added successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal menambahkan destinasi: ' . $e->getMessage())
+                ->with('error', 'Failed to add destination: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -66,10 +66,10 @@ class DestinasiController extends Controller
             );
 
             return redirect()->route('destinasis.index')
-                ->with('success', 'Destinasi berhasil diupdate!');
+                ->with('success', 'Destination updated successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal mengupdate destinasi: ' . $e->getMessage())
+                ->with('error', 'Failed to update destination: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -80,10 +80,10 @@ class DestinasiController extends Controller
             $this->destinasiService->delete($destinasi);
 
             return redirect()->route('destinasis.index')
-                ->with('success', 'Destinasi berhasil dihapus!');
+                ->with('success', 'Destination deleted successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal menghapus destinasi: ' . $e->getMessage());
+                ->with('error', 'Failed to delete destination: ' . $e->getMessage());
         }
     }
 }

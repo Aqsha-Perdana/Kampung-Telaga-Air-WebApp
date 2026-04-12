@@ -34,10 +34,10 @@ class KioskController extends Controller
             );
 
             return redirect()->route('kiosks.index')
-                ->with('success', 'Kiosk berhasil ditambahkan!');
+                ->with('success', 'Kiosk added successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal menambahkan kiosk: ' . $e->getMessage())
+                ->with('error', 'Failed to add kiosk: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -66,10 +66,10 @@ class KioskController extends Controller
             );
 
             return redirect()->route('kiosks.index')
-                ->with('success', 'Kiosk berhasil diupdate!');
+                ->with('success', 'Kiosk updated successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal mengupdate kiosk: ' . $e->getMessage())
+                ->with('error', 'Failed to update kiosk: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -80,10 +80,10 @@ class KioskController extends Controller
             $this->kioskService->delete($kiosk);
 
             return redirect()->route('kiosks.index')
-                ->with('success', 'Kiosk berhasil dihapus!');
+                ->with('success', 'Kiosk deleted successfully!');
         } catch (\Throwable $e) {
             return redirect()->back()
-                ->with('error', 'Gagal menghapus kiosk: ' . $e->getMessage());
+                ->with('error', 'Failed to delete kiosk: ' . $e->getMessage());
         }
     }
 }

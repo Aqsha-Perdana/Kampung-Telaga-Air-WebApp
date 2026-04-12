@@ -30,7 +30,7 @@ class BoatController extends Controller
         $this->boatService->create($request->validated(), $request->file('foto'));
 
         return redirect()->route('boats.index')
-            ->with('success', 'Boat berhasil ditambahkan!');
+            ->with('success', 'Boat added successfully!');
     }
 
     public function show(Boat $boat)
@@ -48,7 +48,7 @@ class BoatController extends Controller
         $this->boatService->update($boat, $request->validated(), $request->file('foto'));
 
         return redirect()->route('boats.index')
-            ->with('success', 'Boat berhasil diperbarui!');
+            ->with('success', 'Boat updated successfully!');
     }
 
     public function destroy(Boat $boat)
@@ -56,6 +56,6 @@ class BoatController extends Controller
         $this->boatService->delete($boat);
 
         return redirect()->route('boats.index')
-            ->with('success', 'Boat berhasil dihapus!');
+            ->with('success', 'Boat deleted successfully!');
     }
 }

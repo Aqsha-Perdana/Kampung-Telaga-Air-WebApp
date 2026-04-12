@@ -361,7 +361,7 @@ function changeMainImage(src, element) {
 function copyLink() {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {
-        alert('Link berhasil disalin!');
+        alert('Link copied to clipboard!');
     });
 }
 </script>

@@ -146,7 +146,7 @@
                                          decoding="async"
                                          style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;"
                                          data-bs-toggle="tooltip"
-                                         title="Klik untuk memperbesar">
+                                         title="Click to enlarge">
                                 @else
                                     <div class="bg-light rounded d-flex align-items-center justify-content-center" 
                                          style="width: 70px; height: 70px;">
@@ -169,11 +169,11 @@
                             <td class="text-center">
                                 @if($homestay->is_active)
                                     <span class="badge bg-success px-3 py-2">
-                                        <i class="bi bi-check-circle me-1"></i>Aktif
+                                        <i class="bi bi-check-circle me-1"></i>Active
                                     </span>
                                 @else
                                     <span class="badge bg-secondary px-3 py-2">
-                                        <i class="bi bi-x-circle me-1"></i>Tidak Aktif
+                                        <i class="bi bi-x-circle me-1"></i>Inactive
                                     </span>
                                 @endif
                             </td>
@@ -182,7 +182,7 @@
                                     <a href="{{ route('homestays.show', $homestay) }}" 
                                        class="btn btn-sm btn-info text-white" 
                                        data-bs-toggle="tooltip"
-                                       title="Lihat Detail">
+                                       title="View Detail">
                                         <i class="ti ti-eye"></i>
                                     </a>
                                     <a href="{{ route('homestays.edit', $homestay) }}" 
@@ -200,7 +200,7 @@
                                         <button type="submit" 
                                                 class="btn btn-sm btn-danger" 
                                                 data-bs-toggle="tooltip"
-                                                title="Hapus Data">
+                                                title="Delete Data">
                                             <i class="ti ti-trash"></i>
                                         </button>
                                     </form>
@@ -212,10 +212,10 @@
                             <td colspan="8" class="text-center py-5">
                                 <div class="py-4">
                                     <i class="ti ti-database-off fs-1 text-muted mb-3 d-block"></i>
-                                    <h5 class="text-muted">Belum Ada Data Homestay</h5>
-                                    <p class="text-muted mb-3">Mulai tambahkan homestay pertama Anda</p>
+                                    <h5 class="text-muted">No Homestay Data Yet</h5>
+                                    <p class="text-muted mb-3">Start by adding your first homestay</p>
                                     <a href="{{ route('homestays.create') }}" class="btn btn-primary">
-                                        <i class="ti ti-plus me-2"></i>Tambah Homestay
+                                        <i class="ti ti-plus me-2"></i>Add Homestay
                                     </a>
                                 </div>
                             </td>
@@ -229,8 +229,8 @@
             @if($homestays->hasPages())
             <div class="mt-4 d-flex justify-content-between align-items-center">
                 <div class="text-muted">
-                    Menampilkan {{ $homestays->firstItem() ?? 0 }} - {{ $homestays->lastItem() ?? 0 }} 
-                    dari {{ $homestays->total() }} homestay
+                    Showing {{ $homestays->firstItem() ?? 0 }} - {{ $homestays->lastItem() ?? 0 }} 
+                    of {{ $homestays->total() }} homestays
                 </div>
                 <div>
                     {{ $homestays->links() }}
@@ -266,11 +266,11 @@
                         <div class="position-absolute top-0 end-0 m-3">
                             @if($homestay->is_active)
                                 <span class="badge bg-success shadow-sm">
-                                    <i class="bi bi-check-circle me-1"></i>Aktif
+                                    <i class="bi bi-check-circle me-1"></i>Active
                                 </span>
                             @else
                                 <span class="badge bg-secondary shadow-sm">
-                                    <i class="bi bi-x-circle me-1"></i>Tidak Aktif
+                                    <i class="bi bi-x-circle me-1"></i>Inactive
                                 </span>
                             @endif
                         </div>
@@ -287,13 +287,13 @@
                         
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <small class="text-muted d-block">Kapasitas</small>
+                                <small class="text-muted d-block">Capacity</small>
                                 <span class="badge bg-info bg-opacity-10 text-info">
-                                    <i class="ti ti-users me-1"></i>{{ $homestay->kapasitas }} Orang
+                                    <i class="ti ti-users me-1"></i>{{ $homestay->kapasitas }} People
                                 </span>
                             </div>
                             <div class="text-end">
-                                <small class="text-muted d-block">Harga/Malam</small>
+                                <small class="text-muted d-block">Price/Night</small>
                                 <span class="fw-bold text-success">{{ $homestay->formatted_harga }}</span>
                             </div>
                         </div>
@@ -316,7 +316,7 @@
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm w-100">
-                                        <i class="ti ti-trash me-1"></i>Hapus
+                                        <i class="ti ti-trash me-1"></i>Delete
                                     </button>
                                 </form>
                             </div>
@@ -329,10 +329,10 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-body text-center py-5">
                         <i class="ti ti-database-off fs-1 text-muted mb-3 d-block"></i>
-                        <h5 class="text-muted">Belum Ada Data Homestay</h5>
-                        <p class="text-muted mb-3">Mulai tambahkan homestay pertama Anda</p>
+                        <h5 class="text-muted">No Homestay Data Yet</h5>
+                        <p class="text-muted mb-3">Start by adding your first homestay</p>
                         <a href="{{ route('homestays.create') }}" class="btn btn-primary">
-                            <i class="ti ti-plus me-2"></i>Tambah Homestay
+                            <i class="ti ti-plus me-2"></i>Add Homestay
                         </a>
                     </div>
                 </div>
@@ -346,8 +346,8 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="text-muted">
-                        Menampilkan {{ $homestays->firstItem() ?? 0 }} - {{ $homestays->lastItem() ?? 0 }} 
-                        dari {{ $homestays->total() }} homestay
+                        Showing {{ $homestays->firstItem() ?? 0 }} - {{ $homestays->lastItem() ?? 0 }} 
+                        of {{ $homestays->total() }} homestays
                     </div>
                     <div>
                         {{ $homestays->links() }}

@@ -16,7 +16,7 @@
 
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0">Form Edit Kiosk - {{ $kiosk->id_kiosk }}</h5>
+            <h5 class="mb-0">Edit Kiosk Form - {{ $kiosk->id_kiosk }}</h5>
         </div>
         <div class="card-body">
             <form action="{{ route('kiosks.update', $kiosk->id_kiosk) }}" method="POST" enctype="multipart/form-data">
@@ -26,7 +26,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="nama" class="form-label">Nama Kiosk <span class="text-danger">*</span></label>
+                            <label for="nama" class="form-label">Kiosk Name <span class="text-danger">*</span></label>
                             <input type="text" 
                                    class="form-control @error('nama') is-invalid @enderror" 
                                    id="nama" 
@@ -41,7 +41,7 @@
 
                     <div class="col-md-3">
                         <div class="mb-3">
-                            <label for="kapasitas" class="form-label">Kapasitas (orang) <span class="text-danger">*</span></label>
+                            <label for="kapasitas" class="form-label">Capacity (people) <span class="text-danger">*</span></label>
                             <input type="number" 
                                    class="form-control @error('kapasitas') is-invalid @enderror" 
                                    id="kapasitas" 
@@ -57,7 +57,7 @@
 
                     <div class="col-md-3">
                         <div class="mb-3">
-                            <label for="harga_per_paket" class="form-label">Harga/Paket (RM) <span class="text-danger">*</span></label>
+                            <label for="harga_per_paket" class="form-label">Price/Package (RM) <span class="text-danger">*</span></label>
                             <input type="number" 
                                    class="form-control @error('harga_per_paket') is-invalid @enderror" 
                                    id="harga_per_paket" 
@@ -74,7 +74,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="deskripsi" class="form-label">Deskripsi</label>
+                    <label for="deskripsi" class="form-label">Description</label>
                     <textarea class="form-control @error('deskripsi') is-invalid @enderror" 
                               id="deskripsi" 
                               name="deskripsi" 
@@ -85,7 +85,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Foto Saat Ini</label>
+                    <label class="form-label">Current Photos</label>
                     @if($kiosk->fotos->count() > 0)
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             @foreach($kiosk->fotos as $foto)
@@ -102,20 +102,20 @@
                                                value="{{ $foto->id }}" 
                                                id="hapus{{ $foto->id }}">
                                         <label class="form-check-label small" for="hapus{{ $foto->id }}">
-                                            Hapus
+                                            Delete
                                         </label>
                                     </div>
                                 </div>
                             @endforeach
                         </div>
-                        <small class="text-muted">Centang foto yang ingin dihapus</small>
+                        <small class="text-muted">Check the photos you want to delete</small>
                     @else
-                        <p class="text-muted">Belum ada foto</p>
+                        <p class="text-muted">No photos yet</p>
                     @endif
                 </div>
 
                 <div class="mb-3">
-                    <label for="fotos" class="form-label">Tambah Foto Baru</label>
+                    <label for="fotos" class="form-label">Add New Photos</label>
                     <input type="file" 
                            class="form-control @error('fotos.*') is-invalid @enderror" 
                            id="fotos" 
@@ -123,7 +123,7 @@
                            accept="image/*"
                            multiple
                            onchange="previewImages()">
-                    <small class="text-muted">Format: JPG, JPEG, PNG, GIF. Maksimal 2MB per foto. Pilih beberapa foto sekaligus</small>
+                    <small class="text-muted">Format: JPG, JPEG, PNG, GIF. Max 2MB per photo. You can select multiple photos at once</small>
                     @error('fotos.*')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
@@ -136,7 +136,7 @@
                         <i class="bi bi-save"></i> Update
                     </button>
                     <a href="{{ route('kiosks.index') }}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left"></i> Kembali
+                        <i class="bi bi-arrow-left"></i> Back
                     </a>
                 </div>
             </form>
@@ -160,7 +160,7 @@ function previewImages() {
                 div.className = 'position-relative';
                 div.innerHTML = `
                     <img src="${e.target.result}" class="img-thumbnail" style="width: 120px; height: 120px; object-fit: cover;">
-                    <span class="badge bg-success position-absolute top-0 start-0 m-1">Baru ${index + 1}</span>
+                    <span class="badge bg-success position-absolute top-0 start-0 m-1">New ${index + 1}</span>
                 `;
                 preview.appendChild(div);
             }
