@@ -54,6 +54,55 @@ return [
                     ],
                 ],
             ],
+            'refund_rules' => [
+                'default' => [
+                    'enabled' => false,
+                    'partial_refund' => false,
+                    'validity_days' => 0,
+                ],
+                'channels' => [
+                    'MY_TOUCHNGO' => [
+                        'enabled' => true,
+                        'partial_refund' => true,
+                        'validity_days' => 30,
+                    ],
+                    'TOUCHNGO' => [
+                        'enabled' => true,
+                        'partial_refund' => true,
+                        'validity_days' => 30,
+                    ],
+                    'MY_SHOPEEPAY' => [
+                        'enabled' => true,
+                        'partial_refund' => true,
+                        'validity_days' => 365,
+                    ],
+                    'SHOPEEPAY' => [
+                        'enabled' => true,
+                        'partial_refund' => true,
+                        'validity_days' => 365,
+                    ],
+                    'MY_GRABPAY' => [
+                        'enabled' => true,
+                        'partial_refund' => true,
+                        'validity_days' => 365,
+                    ],
+                    'GRABPAY' => [
+                        'enabled' => true,
+                        'partial_refund' => true,
+                        'validity_days' => 365,
+                    ],
+                    'MY_WECHATPAY' => [
+                        'enabled' => true,
+                        'partial_refund' => false,
+                        'validity_days' => 365,
+                    ],
+                    'WECHATPAY' => [
+                        'enabled' => true,
+                        'partial_refund' => false,
+                        'validity_days' => 365,
+                    ],
+                ],
+            ],
             'invoice_duration' => (int) env('XENDIT_INVOICE_DURATION', 3600),
         ],
     ],

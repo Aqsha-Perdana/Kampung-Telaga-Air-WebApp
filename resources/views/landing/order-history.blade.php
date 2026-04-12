@@ -247,7 +247,7 @@
 
                                         @if($order->status === 'refund_requested')
                                             <div class="alert alert-warning py-2 mt-3 mb-0">
-                                                <strong>Refund request is under review.</strong>
+                                                <strong>{{ ($order->refund_status ?? null) === 'processing' ? 'Refund request is being processed by the payment gateway.' : 'Refund request is under review.' }}</strong>
                                                 @if($order->refund_reason)
                                                     <div class="small mt-1">Reason: {{ $order->refund_reason }}</div>
                                                 @endif

@@ -265,6 +265,7 @@ class CheckoutService
             'refund_amount' => null,
             'refund_fee' => null,
             'stripe_refund_id' => null,
+            'xendit_refund_id' => null,
             'refunded_at' => null,
             'refund_failure_reason' => null,
         ]);

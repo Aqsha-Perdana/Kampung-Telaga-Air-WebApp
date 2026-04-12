@@ -6,6 +6,7 @@ use App\Helpers\XenditPaymentHelper;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\PaymentLog;
+use App\Services\RefundService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,8 @@ class XenditOrderService
     public function __construct(
         private readonly XenditPaymentHelper $xenditPaymentHelper,
         private readonly AdminNotificationService $adminNotificationService,
-        private readonly CustomerEmailService $customerEmailService
+        private readonly CustomerEmailService $customerEmailService,
+        private readonly RefundService $refundService
     ) {
     }
 
@@ -109,6 +111,13 @@ class XenditOrderService
         $this->xenditPaymentHelper->verifyWebhookToken($request->header('x-callback-token'));
 
         $payload = $request->json()->all() ?: $request->all();
+        $event = strtolower((string) ($payload['event'] ?? data_get($payload, 'data.event') ?? data_get($payload, 'data.data.event') ?? ''));
+
+        if (in_array($event, ['refund.succeeded', 'refund.failed'], true)) {
+            $this->handleRefundWebhook($payload, $event);
+            return;
+        }
+
         $status = strtoupper((string) ($payload['status'] ?? ''));
         $orderId = (string) ($payload['external_id'] ?? '');
 
@@ -121,6 +130,15 @@ class XenditOrderService
             'PAID' => $this->handlePaymentSuccess($payload),
             'EXPIRED' => $this->handlePaymentExpired($payload),
             default => Log::info('Ignoring Xendit webhook status', ['order_id' => $orderId, 'status' => $status]),
+        };
+    }
+
+    private function handleRefundWebhook(array $payload, string $event): void
+    {
+        match ($event) {
+            'refund.succeeded' => $this->refundService->finalizeXenditRefundSucceeded($payload),
+            'refund.failed' => $this->refundService->finalizeXenditRefundFailed($payload),
+            default => null,
         };
     }
 

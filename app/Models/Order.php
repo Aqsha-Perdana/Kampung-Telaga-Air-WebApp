@@ -51,6 +51,7 @@ class Order extends Model
         'refund_fee',
         'refund_status',
         'stripe_refund_id',
+        'xendit_refund_id',
         'refunded_at',
         'refund_failure_reason',
     ];

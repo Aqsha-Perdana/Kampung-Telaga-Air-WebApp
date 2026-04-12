@@ -35,6 +35,22 @@ class XenditPaymentHelper
             ->json();
     }
 
+    public function createRefund(array $payload, ?string $idempotencyKey = null): array
+    {
+        $request = $this->client();
+
+        if ($idempotencyKey !== null && trim($idempotencyKey) !== '') {
+            $request = $request->withHeaders([
+                'X-IDEMPOTENCY-KEY' => trim($idempotencyKey),
+            ]);
+        }
+
+        return $request
+            ->post('/refunds', $payload)
+            ->throw()
+            ->json();
+    }
+
     public function setWebhookUrl(string $type, string $url): array
     {
         return $this->client()
